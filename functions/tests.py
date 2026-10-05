@@ -1,14 +1,13 @@
 from notations import Cube
 
 cube = Cube()
-
 cube.display()
-cube.R()
-cube.R()
-cube.R()
-cube.L()
-# cube.R()
-print('\n')
-print('\n')
-print('\n')
+print('\n\n\n')
+for _ in range(1):
+    cube.R()
+    cube.L()
+    cube.U()
+    cube.D()
+    cube.F()
+    cube.B()
 cube.display()
