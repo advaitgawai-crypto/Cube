@@ -1,13 +1,3 @@
 from notations import Cube
+import numpy as np
 
-cube = Cube()
-cube.display()
-print('\n\n\n')
-for _ in range(1):
-    cube.R()
-    cube.L()
-    cube.U()
-    cube.D()
-    cube.F()
-    cube.B()
-cube.display()
