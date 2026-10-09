@@ -121,3 +121,80 @@ class Cube:
         face.B()
         face.B()
         face.B()
+
+    def X(face):
+        temp = face.upper.copy()
+
+        face.upper = face.front.copy()
+        face.front = face.lower.copy()
+        face.lower = np.flip(face.back)
+        face.back  = np.flip(temp)
+
+        face.right = np.rot90(face.right,-1)
+        face.left = np.rot90(face.left,1)
+
+    def X_prime(face):
+        face.X()
+        face.X()
+        face.X()
+
+    def Y(face):
+        temp = face.front.copy()
+
+        face.front = face.right.copy()
+        face.right = face.back.copy()
+        face.back  = face.left.copy()
+        face.left  = temp
+
+        face.upper = np.rot90(face.upper,-1)
+        face.lower = np.rot90(face.lower, 1)
+
+    def Y_prime(face):
+        face.Y()
+        face.Y()
+        face.Y()
+
+    def Z(face):
+        temp = face.upper.copy()
+
+        face.upper = np.rot90(face.left, -1)
+        face.left  = np.rot90(face.lower, -1)
+        face.lower = np.rot90(face.right, -1)
+        face.right = np.rot90(temp, -1)
+
+        face.front = np.rot90(face.front, -1)
+        face.back  = np.rot90(face.back, 1)
+
+    def Z_prime(face):
+        face.Z()
+        face.Z()
+        face.Z()
+
+    def M_prime(face):
+        face.R_Prime()
+        face.X()
+        face.L()
+
+    def M(face):
+        face.M_prime()
+        face.M_prime()
+        face.M_prime()
+
+    def E_prime(face):
+        face.Y()
+        face.U_Prime()
+        face.D()
+
+    def E(face):
+        face.E_prime()
+        face.E_prime()
+        face.E_prime()
+
+    def S(face):
+        face.Z()
+        face.F_Prime()
+        face.B()
+    def S_prime(face):
+        face.S()
+        face.S()
+        face.S()    
