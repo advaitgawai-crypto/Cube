@@ -5,12 +5,12 @@ import numpy as np
 # front/right/left/back/lower: standard "net" orientation
 class Cube:
     def __init__(face):
-        face.upper = np.array([[0,0,0],[0,0,0],[0,0,0]]) #white
-        face.front = np.array([[1,1,1],[1,1,1],[1,1,1]]) #orange
-        face.lower = np.array([[2,2,2],[2,2,2],[2,2,2]]) #yellow
-        face.right = np.array([[3,3,3],[3,3,3],[3,3,3]]) #green
-        face.left  = np.array([[4,4,4],[4,4,4],[4,4,4]]) #blue
-        face.back  = np.array([[5,5,5],[5,5,5],[5,5,5]]) #red
+        face.upper = np.array([[0,0,0],[0,0,0],[0,0,0]]) #white  = 0
+        face.front = np.array([[1,1,1],[1,1,1],[1,1,1]]) #orange = 1
+        face.lower = np.array([[2,2,2],[2,2,2],[2,2,2]]) #yellow = 2
+        face.right = np.array([[3,3,3],[3,3,3],[3,3,3]]) #green  = 3
+        face.left  = np.array([[4,4,4],[4,4,4],[4,4,4]]) #blue   = 4
+        face.back  = np.array([[5,5,5],[5,5,5],[5,5,5]]) #red    = 5
 
     def display(face):
         print (face.upper)
