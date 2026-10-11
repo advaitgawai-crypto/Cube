@@ -4,8 +4,9 @@ import random as rd
 import numpy as np
 import h5py
 import time
+import os
 
-# white UP, orange FRONT. Every move below leaves the cross intact.
+# White UP, orange FRONT. Every move below leaves the cross intact.
 def algorithm_1(cube: Cube):  cube.R_Prime(); cube.D(); cube.R()
 def algorithm_2(cube: Cube):  cube.R_Prime(); cube.D_Prime(); cube.R()
 def algorithm_3(cube: Cube):  cube.L_Prime(); cube.D(); cube.L()
@@ -16,11 +17,16 @@ def algorithm_7(cube: Cube):  cube.B_Prime(); cube.D(); cube.B()
 def algorithm_8(cube: Cube):  cube.B_Prime(); cube.D_Prime(); cube.B()
 def algorithm_9(cube: Cube):  cube.D()
 def algorithm_10(cube: Cube): cube.D_Prime()
+# 11-14 are the ones that flip edges. Without them only 0.8% of cross-solved states are reachable.
+def algorithm_11(cube: Cube): cube.F_Prime(); cube.R_Prime(); cube.D(); cube.R(); cube.F()
+def algorithm_12(cube: Cube): cube.F_Prime(); cube.R_Prime(); cube.D_Prime(); cube.R(); cube.F()
+def algorithm_13(cube: Cube): cube.F(); cube.R(); cube.D(); cube.R_Prime(); cube.F_Prime()
+def algorithm_14(cube: Cube): cube.F(); cube.R(); cube.D_Prime(); cube.R_Prime(); cube.F_Prime()
 
-ALGS = [algorithm_1, algorithm_2, algorithm_3, algorithm_4, algorithm_5,
-        algorithm_6, algorithm_7, algorithm_8, algorithm_9, algorithm_10]
+ALGS = [algorithm_1, algorithm_2, algorithm_3, algorithm_4, algorithm_5, algorithm_6, algorithm_7,
+        algorithm_8, algorithm_9, algorithm_10, algorithm_11, algorithm_12, algorithm_13, algorithm_14]
 # index of the algorithm that undoes each one
-INVERSE = {0: 1, 1: 0, 2: 3, 3: 2, 4: 5, 5: 4, 6: 7, 7: 6, 8: 9, 9: 8}
+INVERSE = {0: 1, 1: 0, 2: 3, 3: 2, 4: 5, 5: 4, 6: 7, 7: 6, 8: 9, 9: 8, 10: 11, 11: 10, 12: 13, 13: 12}
 
 
 def cross_ok(c: Cube):
@@ -57,6 +63,7 @@ def random_walk(n):
 if __name__ == "__main__":
     WALK_LEN = 15
     TARGET = 50000          # unique states wanted
+    MAX_WALKS = 200_000     # hard stop so the loop can never run forever
     best = {}               # state bytes -> (state, smallest distance seen)
 
     solved = flatten_cube(Cube())
@@ -64,7 +71,7 @@ if __name__ == "__main__":
 
     start = time.perf_counter()
     walks = 0
-    while len(best) < TARGET:
+    while len(best) < TARGET and walks < MAX_WALKS:
         for state, d in random_walk(WALK_LEN):
             key = state.tobytes()
             if key not in best or d < best[key][1]:
@@ -74,13 +81,22 @@ if __name__ == "__main__":
             elapsed = time.perf_counter() - start
             print(f"{walks} walks, {len(best)}/{TARGET} unique, {elapsed:.0f}s", flush=True)
 
+    if len(best) < TARGET:
+        print(f"WARNING: stopped at MAX_WALKS with only {len(best)} unique states (target {TARGET})")
+
     states = np.array([v[0] for v in best.values()])
     distances = np.array([v[1] for v in best.values()])
 
-    with h5py.File("data/f2l_data.h5", "w") as f:
+    # save next to this script, and create the data/ folder if it doesn't exist
+    out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "f2l_data.h5")
+
+    with h5py.File(out_path, "w") as f:
         f.create_dataset("states", data=states)
         f.create_dataset("distances", data=distances)
 
-    with h5py.File("data/f2l_data.h5", "r") as f:
+    with h5py.File(out_path, "r") as f:
         print(f["states"].shape, f["distances"].shape)
+    print("saved to:", out_path)
     print("distance counts:", dict(zip(*np.unique(distances, return_counts=True))))
