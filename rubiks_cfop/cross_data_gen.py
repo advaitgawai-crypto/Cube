@@ -1,79 +1,47 @@
 from notations import Cube
 import random as rd
-import numpy as np    
+import numpy as np
 from collections import deque
 import copy
 from cube_utils import flatten_cube
 import h5py
+from cross_safe_algorithms import CrossSafe
+import time
 
-MOVES = ["R","R_Prime","L","L_Prime","U","U_Prime","D","D_Prime","F","F_Prime","B","B_Prime","X","X_prime","Y","Y_prime","Z","Z_prime","M_prime","M","E_prime","E","S","S_prime"]
-# cube = Cube()
+RandomMoves = ["R","R_Prime","L","L_Prime","U","U_Prime","D","D_Prime","F","F_Prime","B","B_Prime","M_prime","M","E_prime","E","S","S_prime"]
+CrossSafeMoves = ["algorithm_1","algorithm_2","algorithm_3","algorithm_4","algorithm_5", "algorithm_6"]
 
-def cross_solved(cube: Cube):
-    if (
-        cube.upper[0,1]==cube.upper[1,1] and
-        cube.upper[1,0]==cube.upper[1,1] and
-        cube.upper[1,2]==cube.upper[1,1] and
-        cube.upper[2,1]==cube.upper[1,1] and
-        cube.front[0,1]==cube.front[1,1] and
-        cube.right[0,1]==cube.right[1,1] and
-        cube.left[0,1] ==cube.left[1,1]  and
-        cube.back[0,1] ==cube.back[1,1]
-    ):
-        return True
-    else:
-        return False
-
-depth = 10
-
-def scramble(depth):
+def make_cross_start(num_algs):
+    algs = CrossSafe()
     cube = Cube()
-    for _ in range(depth):
-        pick = rd.choice(MOVES)
-        getattr(cube,pick)()
-
-    cube.display()
+    for _ in range(num_algs):
+        name = rd.choice(CrossSafeMoves)
+        getattr(algs, name)(cube)
     return cube
 
-def cross_distance(start):
-    line = deque()
-    seen = set()
-    seen.add(flatten_cube(start).tobytes())
-    line.append((start, 0))
-    while line:
-        cube, steps = line.popleft()
-        if cross_solved(cube):                    
-            return steps             
-        for name in MOVES:
-            new = copy.deepcopy(cube)
-            getattr(new, name)()
-            key = flatten_cube(new).tobytes()
-            if key not in seen:
-                seen.add(key)
-                line.append((new, steps+1))
-
-def random_walk(n):
-    cube = Cube()
+def walk_from(start, n_cross, n_full):
+    cube = copy.deepcopy(start)
+    algs = CrossSafe()
     samples = []
-    for step in range(1, n + 1):
-        pick = rd.choice(MOVES)                      # which function picks a random move?
-        getattr(cube, pick)()
-        samples.append((flatten_cube(cube), step))     # what goes in the first slot?
+    step = 0
+    for _ in range(n_cross):
+        step += 1
+        name = rd.choice(CrossSafeMoves)
+        getattr(algs, name)(cube)
+        samples.append((flatten_cube(cube), step))
+    for _ in range(n_full):
+        step += 1
+        getattr(cube, rd.choice(RandomMoves))()
+        samples.append((flatten_cube(cube), step))
     return samples
 
+starts = []
+for _ in range(4000):
+    starts.append(make_cross_start(15))
 
-
-import time
 all_samples = []
-start = time.perf_counter()
-
-for i, _ in enumerate(range(6250), start=1):
-    all_samples.extend(random_walk(8))
-    if i % 500 == 0:
-        elapsed = time.perf_counter() - start
-        left = elapsed / i * (6250 - i)                      # average time per walk * walks left
-        print(f"{i}/6250 done, about {left:.1f}s left", flush=True)
-
+for start in starts:
+    all_samples.extend(walk_from(start, 0, 15))
 
 states_list, distances_list = zip(*all_samples)
 states = np.array(states_list)
@@ -85,4 +53,3 @@ with h5py.File("data/cross_data.h5", "w") as f:
 
 with h5py.File("data/cross_data.h5", "r") as f:
     print(f["states"].shape, f["distances"].shape)
-
