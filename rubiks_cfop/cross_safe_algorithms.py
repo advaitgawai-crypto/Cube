@@ -6,7 +6,7 @@ class CrossSafe:
     def algorithm_1(self, cube: Cube):
         cube.R_Prime()
         cube.D()
-        cube.R()
+        cube.R()    
 
     def algorithm_2(self, cube: Cube):
         cube.R_Prime()
