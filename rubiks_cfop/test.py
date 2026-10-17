@@ -1,13 +1,5 @@
-import h5py
-import numpy as np
-
-with h5py.File("data/cross_data.h5", "r") as f:
-    distances = f["distances"][:]
-
-print("min:", distances.min())
-print("max:", distances.max())
-print("mean:", distances.mean())
-
-# Baseline: MSE if you always predict the mean (which is equivalent to the variance of the distances)
-baseline_mse = np.mean((distances - distances.mean()) ** 2)
-print("baseline MSE (variance):", baseline_mse)
+import torch
+val_indices = torch.load("models/cross_val_indices.pt")
+test_indices = torch.load("models/cross_test_indices.pt")
+print("val:", len(val_indices), "test:", len(test_indices))
+print("overlap:", len(set(val_indices.tolist()) & set(test_indices.tolist())))

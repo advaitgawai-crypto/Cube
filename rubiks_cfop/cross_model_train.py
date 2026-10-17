@@ -1,48 +1,53 @@
 import os
 import h5py
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 from networks import CubeNet
 
-# 1. Setup
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.manual_seed(0)
+# 1. Setup (Clean Baseline: no dropout, no weight decay)
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 print(f"Using device: {device}")
 
-model = CubeNet(dropout_p=0.1).to(device)
+model = CubeNet(dropout_p=0.3).to(device)
 loss_fn = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
-
-# Add Learning Rate Scheduler: cuts lr in half if val_loss doesn't improve for 3 epochs
+optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=0.0)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
 
 epochs = 50
 best_val_loss = float('inf')
+patience = 5
+epochs_no_improve = 0
 
 # Ensure the models directory exists
 os.makedirs("models", exist_ok=True)
 
 # 2. Load data
-with h5py.File("data/cross_data.h5", "r") as f:
+with h5py.File("data/cross_data_v2.h5", "r") as f:
     states = torch.tensor(f["states"][:], dtype=torch.int64)
     distances = torch.tensor(f["distances"][:], dtype=torch.float32)
+    groups = f["groups"][:]
 
-# Reshape distances to match model output shape: (60000, 1)
 distances = distances.unsqueeze(1)
 
-# 3. Split data
-dataset_size = len(states)
-indices = torch.randperm(dataset_size)
+# split by start (trajectory), so neighbors never land in both train and val
+rng = np.random.default_rng(0)
+ug = rng.permutation(np.unique(groups))
+n = len(ug)
+train_g, val_g, test_g = ug[:int(.8*n)], ug[int(.8*n):int(.9*n)], ug[int(.9*n):]
+train_indices = torch.tensor(np.where(np.isin(groups, train_g))[0])
+val_indices   = torch.tensor(np.where(np.isin(groups, val_g))[0])
+test_indices  = torch.tensor(np.where(np.isin(groups, test_g))[0])
 
-train_size = int(0.9 * dataset_size)
-train_indices = indices[:train_size]
-val_indices = indices[train_size:]
-
-# Save the validation indices to the models folder for testing consistency
+# Save validation and test indices
 torch.save(val_indices, "models/cross_val_indices.pt")
+torch.save(test_indices, "models/cross_test_indices.pt")
 
-# Slice data into train and validation sets
+# Slice data into train, validation, and test sets
 train_states = states[train_indices]
 train_distances = distances[train_indices]
 
@@ -56,7 +61,6 @@ val_loader = DataLoader(TensorDataset(val_states, val_distances), batch_size=bat
 
 # 4. Training loop
 for epoch in range(1, epochs + 1):
-    # Training phase
     model.train()
     train_loss_total = 0.0
     
@@ -75,7 +79,6 @@ for epoch in range(1, epochs + 1):
         
     avg_train_loss = train_loss_total / len(train_loader.dataset)
 
-    # Validation phase
     model.eval()
     val_loss_total = 0.0
     
@@ -90,12 +93,17 @@ for epoch in range(1, epochs + 1):
             
     val_loss = val_loss_total / len(val_loader.dataset)
 
-    # Update scheduler with the current validation loss
     scheduler.step(val_loss)
 
     print(f"Epoch [{epoch}/{epochs}] | Train Loss: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f}")
 
     if val_loss < best_val_loss:
         best_val_loss = val_loss
-        torch.save(model.state_dict(), "models/cross_net.pt")
+        torch.save(model.state_dict(), "models/cross_net_dropout03.pt")
         print(f"--> Saved new best model (Val Loss: {val_loss:.4f})")
+        epochs_no_improve = 0
+    else:
+        epochs_no_improve += 1
+    if epochs_no_improve >= patience:
+        print(f"Early stopping at epoch {epoch} (no improvement for {patience} epochs)")
+        break
