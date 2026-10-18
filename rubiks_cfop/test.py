@@ -1,22 +1,38 @@
-import h5py
-import torch
-from networks import CubeNet
+# test_pll_from_oll.py
+import time
+from notations import Cube
+from oll_safe_algorithms import OLLSafe
+from pll_solver import PLLSolver
 
-device = torch.device("cpu")
 
-with h5py.File("data/pll_data_v2.h5", "r") as f:
-    states = torch.tensor(f["states"][:], dtype=torch.int64)
-    distances = torch.tensor(f["distances"][:], dtype=torch.float32)
+def pll_scramble(alg_number):
+    """Fresh (solved) cube with one PLL algorithm applied: cross, F2L, OLL solved."""
+    cube = Cube()
+    getattr(OLLSafe(), f"algorithm_{alg_number}")(cube)
+    return cube
 
-model = CubeNet(dropout_p=0.0).to(device)
-model.load_state_dict(torch.load("models/pll_net_dropout0.pt", map_location=device))
-model.eval()
 
-with torch.no_grad():
-    preds = model(states.to(device)).squeeze(1).cpu()
+if __name__ == "__main__":
+    solver = PLLSolver("models/pll_net_dropout0.pt")
 
-exact = (torch.round(preds).long() == distances.long()).sum().item()
-max_err = (preds - distances).abs().max().item()
+    alg_numbers = sorted(
+        int(name.split("_")[1])
+        for name in dir(OLLSafe)
+        if name.startswith("algorithm_")
+    )
 
-print(f"Exact matches: {exact}/{len(states)}")
-print(f"Max absolute error: {max_err:.4f}")
+    max_iterations = 20000
+    print(f"{'alg':>4} {'time(s)':>8} {'moves':>6}  result")
+    print("-" * 40)
+
+    for n in alg_numbers:
+        cube = pll_scramble(n)
+        start = time.perf_counter()
+        solution = solver.solve(cube, max_iterations=max_iterations)
+        elapsed = time.perf_counter() - start
+
+        if solution is None:
+            print(f"{n:>4} {elapsed:>8.2f} {'-':>6}  NO SOLUTION (budget hit)")
+        else:
+            ok = solver.solved(solver.copy_cube(cube))  # sanity check of starting state
+            print(f"{n:>4} {elapsed:>8.2f} {len(solution):>6}  solved={ok}")
