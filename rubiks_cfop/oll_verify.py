@@ -10,21 +10,21 @@ FRAME_TOKENS = ("none", "y", "y2", "y'")
 AUF_TOKENS = ("none", "U", "U2", "U'")
 OLL_COUNT = 57
 
-# notations.py gives yellow centre = 2, and the lower face is yellow.
-# The OLL layer is therefore the lower face. If you change the convention
-# (e.g. yellow on upper), change YELLOW and YELLOW_FACE together.
+# The OLL algorithms are written for yellow on top. notations.py has white on
+# upper and yellow on lower, so every token sequence is applied in a flipped view
+# (z2 applied first, z2 again at the end). The cube passed in and returned stays
+# in the notations.py layout, so the model input and the rest of the pipeline do
+# not change.
 YELLOW = 2
-YELLOW_FACE = "lower"
-OPPOSITE_FACE = "upper"
+YELLOW_FACE = "upper"          # in the flipped view
+OPPOSITE_FACE = "lower"        # in the flipped view
 SIDE_FACES = ["front", "right", "back", "left"]
 
-# Rows on each side face that belong to the first two layers (not the OLL layer).
-# Row 0 is next to the upper face and row 2 is next to the lower face.
-F2L_ROWS = [0, 1] if YELLOW_FACE == "lower" else [1, 2]
+# Side rows that belong to the first two layers, in the flipped view.
+# Row 0 is next to upper and row 2 is next to lower.
+F2L_ROWS = [1, 2] if YELLOW_FACE == "upper" else [0, 1]
 
-# A U-type AUF is a turn of the OLL layer. Viewed from the yellow face,
-# that is the layer's own clockwise turn, which is D when yellow is on lower.
-AUF_BASE = "D" if YELLOW_FACE == "lower" else "U"
+AUF_BASE = "U" if YELLOW_FACE == "upper" else "D"
 
 FRAME_STEPS = {
     "none": [],
@@ -43,22 +43,46 @@ AUF_STEPS = {
 _oll = OLLAlgorithms()
 
 
+def flip(cube):
+    """Turn the whole cube upside down (z2) in place. Applying it twice is identity."""
+    cube.Z()
+    cube.Z()
+    return cube
+
+
+def inverse_case_state(n):
+    """Scrambled cube for OLL case n, in the notations.py layout.
+
+    Built in the flipped view, where the algorithm is written, then flipped back.
+    """
+    cube = Cube()
+    flip(cube)
+    _oll.apply(cube, n, inverse=True)
+    flip(cube)
+    return cube
+
+
+def _flipped_copy(cube):
+    trial = copy.deepcopy(cube)
+    return flip(trial)
+
+
 def is_oll_solved(cube):
     """True if the yellow face is uniform and the first two layers are intact.
 
-    F2L check: the opposite face is uniform, and the side rows that belong to
-    the first two layers match their own centre colour.
+    Works on a notations.py-layout cube. The check is done in the flipped view.
     """
-    yellow_face = getattr(cube, YELLOW_FACE)
-    if not np.all(yellow_face == YELLOW):
+    view = _flipped_copy(cube)
+
+    if not np.all(getattr(view, YELLOW_FACE) == YELLOW):
         return False
 
-    opposite = getattr(cube, OPPOSITE_FACE)
+    opposite = getattr(view, OPPOSITE_FACE)
     if not np.all(opposite == opposite[1, 1]):
         return False
 
     for name in SIDE_FACES:
-        face = getattr(cube, name)
+        face = getattr(view, name)
         for row in F2L_ROWS:
             if not np.all(face[row, :] == face[1, 1]):
                 return False
@@ -67,13 +91,14 @@ def is_oll_solved(cube):
 
 def _why_not_solved(cube):
     """Human-readable reason, used in failure messages."""
-    if not np.all(getattr(cube, YELLOW_FACE) == YELLOW):
+    view = _flipped_copy(cube)
+    if not np.all(getattr(view, YELLOW_FACE) == YELLOW):
         return "yellow face not uniform"
-    opposite = getattr(cube, OPPOSITE_FACE)
+    opposite = getattr(view, OPPOSITE_FACE)
     if not np.all(opposite == opposite[1, 1]):
         return f"{OPPOSITE_FACE} face not uniform (first layer broken)"
     for name in SIDE_FACES:
-        face = getattr(cube, name)
+        face = getattr(view, name)
         for row in F2L_ROWS:
             if not np.all(face[row, :] == face[1, 1]):
                 return f"{name} row {row} broken (F2L broken)"
@@ -81,7 +106,11 @@ def _why_not_solved(cube):
 
 
 def apply_triple(cube, frame, auf, alg):
-    """Apply frame, then AUF, then OLL algorithm `alg` to `cube` in place."""
+    """Apply frame, then AUF, then OLL algorithm `alg` to `cube` in place.
+
+    The tokens run in the flipped view, and the cube is returned in the
+    notations.py layout.
+    """
     if frame not in FRAME_STEPS:
         raise ValueError(f"unknown frame token: {frame}")
     if auf not in AUF_STEPS:
@@ -89,9 +118,11 @@ def apply_triple(cube, frame, auf, alg):
     if not 1 <= alg <= OLL_COUNT:
         raise ValueError(f"OLL number must be 1..{OLL_COUNT}, got {alg}")
 
+    flip(cube)
     for name in FRAME_STEPS[frame] + AUF_STEPS[auf]:
         getattr(cube, name)()
     _oll.apply(cube, alg)
+    flip(cube)
     return cube
 
 
@@ -123,19 +154,16 @@ def valid_triples(cube):
 
 
 if __name__ == "__main__":
-    # Positive check: inverse of OLL k, then the triple (none, none, k), must solve.
+    # Positive check: inverse of OLL k, then (none, none, k), must solve.
     # Negative check: a solved cube with OLL k applied must fail, because every
     # OLL case is non-solved. Both checks test the verifier, not the algorithms.
     positive_failures = []
     negative_passes = []
     for n in range(1, OLL_COUNT + 1):
-        scrambled = Cube()
-        _oll.apply(scrambled, n, inverse=True)
-        ok, _ = verify(scrambled, "none", "none", n)
+        ok, _ = verify(inverse_case_state(n), "none", "none", n)
         if not ok:
             positive_failures.append(n)
 
-        # verify() applies alg n to a solved cube; that must NOT pass.
         ok, _ = verify(Cube(), "none", "none", n)
         if ok:
             negative_passes.append(n)

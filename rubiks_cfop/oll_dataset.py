@@ -3,9 +3,14 @@ import numpy as np
 from notations import Cube
 from cube_utils import flatten_cube
 from oll_algorithms import OLLAlgorithms
-from oll_verify import AUF_STEPS, FRAME_TOKENS, OLL_COUNT, verify
-
-_oll = OLLAlgorithms()
+from oll_verify import (
+    AUF_STEPS,
+    FRAME_TOKENS,
+    OLL_COUNT,
+    flip,
+    inverse_case_state,
+    verify,
+)
 
 # Whole-cube rotations applied to the case state.
 ROTATIONS = {
@@ -22,11 +27,16 @@ AUF_SCRAMBLES = ["none", "U", "U2", "U'"]
 
 
 def case_state(n, rotation, auf_scramble):
-    """Scrambled state for OLL case n, then the AUF scramble, then the rotation."""
-    cube = Cube()
-    _oll.apply(cube, n, inverse=True)
+    """Scrambled state for OLL case n, then the AUF scramble, then the rotation.
+
+    The AUF scramble is a turn of the yellow layer, so it is applied in the
+    flipped view (see oll_verify). The cube stays in the notations.py layout.
+    """
+    cube = inverse_case_state(n)
+    flip(cube)
     for name in AUF_STEPS[auf_scramble]:
         getattr(cube, name)()
+    flip(cube)
     for name in ROTATIONS[rotation]:
         getattr(cube, name)()
     return cube
