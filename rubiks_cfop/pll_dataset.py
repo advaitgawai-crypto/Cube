@@ -15,26 +15,34 @@ def build_dataset():
                  frame f, pre-AUF p, PLL a, post-AUF q together solve state i.
                  Stored as whole combinations, so the heads are trained on
                  valid combinations, not on each head's marginal.
-    unsolvable : list of (n, frame, pre) with no valid combination
+    unsolvable : list of (n, frame, pre, post) with no valid combination
 
-    Only frame and pre-AUF are scrambles, so the input set is 21 * 4 * 4 = 336.
+    Covers all 21 cases, 4 frame rotations, 4 pre-AUFs, and 4 post-AUFs,
+    deduplicated to cover 100% of distinct PLL states.
     """
-    X, joint, unsolvable = [], [], []
+    states_dict = {}
+    unsolvable = []
     for n in range(1, PLL_COUNT + 1):
         for frame in FRAME_TOKENS:
             for pre in AUF_TOKENS:
-                key = (n, frame, pre)
-                cube = inverse_case_state(n, frame, pre, "none")
-                combos = valid_combos(cube)
-                if not combos:
-                    unsolvable.append(key)
-                    continue
-                mask = np.zeros((len(FRAME_TOKENS), len(AUF_TOKENS), PLL_COUNT, len(AUF_TOKENS)), dtype=bool)
-                for f, p, a, q in combos:
-                    mask[FRAME_TOKENS.index(f), AUF_TOKENS.index(p), a - 1, AUF_TOKENS.index(q)] = True
-                X.append(flatten_cube(cube))
-                joint.append(mask)
-    return np.array(X, dtype=np.int64), np.array(joint, dtype=bool), unsolvable
+                for post in AUF_TOKENS:
+                    key = (n, frame, pre, post)
+                    cube = inverse_case_state(n, frame, pre, post)
+                    state_bytes = flatten_cube(cube).tobytes()
+                    if state_bytes in states_dict:
+                        continue
+                    combos = valid_combos(cube)
+                    if not combos:
+                        unsolvable.append(key)
+                        continue
+                    mask = np.zeros((len(FRAME_TOKENS), len(AUF_TOKENS), PLL_COUNT, len(AUF_TOKENS)), dtype=bool)
+                    for f, p, a, q in combos:
+                        mask[FRAME_TOKENS.index(f), AUF_TOKENS.index(p), a - 1, AUF_TOKENS.index(q)] = True
+                    states_dict[state_bytes] = (flatten_cube(cube), mask)
+
+    X = np.array([v[0] for v in states_dict.values()], dtype=np.int64)
+    joint = np.array([v[1] for v in states_dict.values()], dtype=bool)
+    return X, joint, unsolvable
 
 
 CACHE_PATH = r"C:\Users\Advait Gawai\OneDrive\Desktop\Cube\rubiks_cfop\models\pll_joint.npz"

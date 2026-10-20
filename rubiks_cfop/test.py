@@ -1,38 +1,44 @@
-# test_pll_from_oll.py
-import time
+# test_real_scramble.py
+import random
 from notations import Cube
-from oll_safe_algorithms import OLLSafe
-from pll_solver import PLLSolver
+from cross_solver import CrossSolver
 
 
-def pll_scramble(alg_number):
-    """Fresh (solved) cube with one PLL algorithm applied: cross, F2L, OLL solved."""
-    cube = Cube()
-    getattr(OLLSafe(), f"algorithm_{alg_number}")(cube)
-    return cube
+def to_notation(move):
+    """Convert names like 'R_Prime' to standard notation like \"R'\"."""
+    return move.replace("_Prime", "'")
+
+
+def format_moves(moves):
+    return " ".join(to_notation(m) for m in moves) if moves else "(no moves needed)"
 
 
 if __name__ == "__main__":
-    solver = PLLSolver("models/pll_net_dropout0.pt")
+    solver = CrossSolver("models/cross_net_dropout03.pt")
 
-    alg_numbers = sorted(
-        int(name.split("_")[1])
-        for name in dir(OLLSafe)
-        if name.startswith("algorithm_")
-    )
+    # 1. Scramble a fresh cube with random moves
+    depth = 8
+    scramble = [random.choice(solver.FACE_MOVES) for _ in range(depth)]
 
-    max_iterations = 20000
-    print(f"{'alg':>4} {'time(s)':>8} {'moves':>6}  result")
-    print("-" * 40)
+    cube = Cube()
+    for m in scramble:
+        getattr(cube, m)()
 
-    for n in alg_numbers:
-        cube = pll_scramble(n)
-        start = time.perf_counter()
-        solution = solver.solve(cube, max_iterations=max_iterations)
-        elapsed = time.perf_counter() - start
+    print("Scramble:", format_moves(scramble))
+    print()
+    print("Cube state after scramble:")
+    cube.display()
 
-        if solution is None:
-            print(f"{n:>4} {elapsed:>8.2f} {'-':>6}  NO SOLUTION (budget hit)")
-        else:
-            ok = solver.solved(solver.copy_cube(cube))  # sanity check of starting state
-            print(f"{n:>4} {elapsed:>8.2f} {len(solution):>6}  solved={ok}")
+    # 2. Ask the solver for the moves that solve the cross
+    solution = solver.solve(cube)
+
+    if solution is None:
+        print("No solution found")
+    else:
+        print("Solution:", format_moves(solution), f"({len(solution)} moves)")
+
+        # 3. Check the solution on a copy, so the scrambled cube is untouched
+        check = solver.copy_cube(cube)
+        for m in solution:
+            getattr(check, m)()
+        print("Cross solved after applying solution:", solver.solved(check))

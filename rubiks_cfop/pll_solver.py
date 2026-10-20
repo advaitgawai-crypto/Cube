@@ -2,7 +2,7 @@ import torch
 
 from cube_utils import flatten_cube
 from notations import Cube
-from oll_verify import AUF_TOKENS, FRAME_TOKENS
+from oll_verify import AUF_STEPS, AUF_TOKENS, FRAME_STEPS, FRAME_TOKENS, flip
 from pll_train import PLLNet, joint_probs
 from pll_verify import apply_triple, is_pll_solved
 
@@ -53,6 +53,24 @@ class PLLSolver:
         cube = self.copy_cube(scrambled_cube)
         if self.solved(cube):
             return []
+
+        # Check if the cube is already in a PLL skip (just needs AUF: U, U', U2):
+        for frame in FRAME_TOKENS:
+            for auf in AUF_TOKENS:
+                if frame == "none" and auf == "none":
+                    continue
+                trial = self.copy_cube(cube)
+                flip(trial)
+                for name in FRAME_STEPS[frame] + AUF_STEPS[auf]:
+                    getattr(trial, name)()
+                flip(trial)
+                if self.solved(trial):
+                    path = []
+                    if frame != "none":
+                        path.append(frame)
+                    if auf != "none":
+                        path.append(auf)
+                    return path
 
         frame, pre, alg, post = self.predict(cube)
         apply_triple(cube, frame, pre, alg, post)

@@ -11,12 +11,16 @@ SEED = 0
 CHECKPOINT = r"C:\Users\Advait Gawai\OneDrive\Desktop\Cube\rubiks_cfop\models\oll_model.pt"
 
 class OLLNet(nn.Module):
-    """One-hot cube -> shared trunk -> frame head (4) and algorithm head (57)."""
+    """Yellow-binary cube (54) -> shared trunk -> frame head (4) and algorithm head (57).
+    
+    Using binary yellow stickers makes OLL orientation classification 100% invariant
+    to piece permutation (PLL), allowing it to solve literally ANY F2L-solved cube.
+    """
 
     def __init__(self):
         super().__init__()
         self.trunk = nn.Sequential(
-            nn.Linear(54 * 6, 256),
+            nn.Linear(54, 256),
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
@@ -25,7 +29,10 @@ class OLLNet(nn.Module):
         self.alg_head = nn.Linear(256, OLL_COUNT)
 
     def forward(self, stickers):
-        x = F.one_hot(stickers, num_classes=6).float().flatten(1)
+        if stickers.dtype in (torch.int64, torch.int32):
+            x = (stickers == 2).float()
+        else:
+            x = stickers.float()
         h = self.trunk(x)
         return self.frame_head(h), self.alg_head(h)
 

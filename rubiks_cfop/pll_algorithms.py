@@ -32,13 +32,13 @@ class PLLAlgorithms:
         return getattr(self, f"algorithm_{number}")(cube, inverse)
 
     def algorithm_1(self, cube, inverse=False):
-        return self._run(cube, "x L2 D2 L' U' L D2 L' U L'", inverse)
+        return self._run(cube, "x L2 D2 L' U' L D2 L' U L' x'", inverse)
 
     def algorithm_2(self, cube, inverse=False):
-        return self._run(cube, "x' L2 D2 L U L' D2 L U' L", inverse)
+        return self._run(cube, "x' L2 D2 L U L' D2 L U' L x", inverse)
 
     def algorithm_3(self, cube, inverse=False):
-        return self._run(cube, "x' L' U L D' L' U' L D L' U' L D' L' U L D", inverse)
+        return self._run(cube, "x' L' U L D' L' U' L D L' U' L D' L' U L D x", inverse)
 
     def algorithm_4(self, cube, inverse=False):
         return self._run(cube, "R' U' F' R U R' U' R' F R2 U' R' U' R U R' U R", inverse)
@@ -59,7 +59,7 @@ class PLLAlgorithms:
         return self._run(cube, "M2 U M2 U2 M2 U M2", inverse)
 
     def algorithm_10(self, cube, inverse=False):
-        return self._run(cube, "x R2 F R F' R U2 r' U r U2", inverse)
+        return self._run(cube, "x R2 F R F' R U2 r' U r U2 x'", inverse)
 
     def algorithm_11(self, cube, inverse=False):
         return self._run(cube, "R U R' F' R U R' U' R' F R2 U' R'", inverse)
@@ -86,7 +86,7 @@ class PLLAlgorithms:
         return self._run(cube, "M2 U' M U2 M' U' M2", inverse)
 
     def algorithm_19(self, cube, inverse=False):
-        return self._run(cube, "R' U R' U' y R' F' R2 U' R' U R' F R F", inverse)
+        return self._run(cube, "R' U R' U' y R' F' R2 U' R' U R' F R F y'", inverse)
 
     def algorithm_20(self, cube, inverse=False):
         return self._run(cube, "F R U' R' U' R U R' F' R U R' U' R' F R F'", inverse)
