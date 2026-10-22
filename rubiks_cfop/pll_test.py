@@ -108,16 +108,16 @@ def solve_pll(cube, solver=None):
 
 
 def main():
-    print("=" * 60)
-    print("                RUBIK'S CUBE PLL SOLVER")
-    print("=" * 60)
+    # print("=" * 60)
+    # print("                RUBIK'S CUBE PLL SOLVER")
+    # print("=" * 60)
     print("Enter moves applied to a solved cube (yellow on top).")
-    print("Examples:")
-    print("  - Single algorithm: R U R' F' R U R' U' R' F R2 U' R'")
-    print("  - Chained algorithms: M2 U M2 U2 M2 U M2 M2 U M U2 M' U M2")
-    print("  - With AUFs / rotations: U R U R' U' R' F R2 U' R' U' R U R' F' U'")
+    # print("Examples:")
+    # print("  - Single algorithm: R U R' F' R U R' U' R' F R2 U' R'")
+    # print("  - Chained algorithms: M2 U M2 U2 M2 U M2 M2 U M U2 M' U M2")
+    # print("  - With AUFs / rotations: U R U R' U' R' F R2 U' R' U' R U R' F' U'")
     print("  - Blank: generate a random test scramble")
-    print("-" * 60)
+    # print("-" * 60)
 
     if len(sys.argv) > 1:
         text = " ".join(sys.argv[1:])
