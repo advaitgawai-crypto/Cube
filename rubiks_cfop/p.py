@@ -1,22 +1,34 @@
+"""PLL Test Tool.
+
+Takes the scrambled cube as six 3x3 matrices (colours 0-5, the same layout as the
+Cube class in notations.py), validates that OLL is preserved, and outputs the exact
+sequence of moves to solve PLL.
+"""
+
 import os
 import random
+import re
 import sys
 
+import numpy as np
+
 from notations import Cube
-from oll_algorithms import _expand, _invert_token
-from oll_verify import AUF_TOKENS, FRAME_TOKENS, flip, is_oll_solved
+from oll_algorithms import _expand
+from oll_verify import AUF_TOKENS, FRAME_TOKENS, is_oll_solved
 from pll_algorithms import PLLAlgorithms
 from pll_solver import PLLSolver
-from pll_verify import PLL_COUNT, inverse_case_state
+from pll_verify import PLL_COUNT, inverse_case_state, is_pll_solved
 
-# models folder sits next to this file: rubiks_cfop\models
 MODEL_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "models", "pll_model.pt"
 )
 
+# Same order that Cube.display() prints the faces.
+FACE_ORDER = ["upper", "front", "lower", "right", "left", "back"]
+
 
 class _Recorder(PLLAlgorithms):
-    """Same algorithms, but remembers the move string of the last one applied."""
+    """PLL algorithm runner that records the move sequence."""
 
     def _run(self, cube, sequence, inverse=False):
         self.last = sequence
@@ -24,17 +36,17 @@ class _Recorder(PLLAlgorithms):
 
 
 def algorithm_text(number):
-    """The written moves of PLL `number`, e.g. "R U R' U' R' F R2 U' R' U' R U R' F'"."""
+    """Return the written moves of PLL `number`."""
     recorder = _Recorder()
     recorder.apply(Cube(), number)
     return recorder.last
 
 
 def to_moves(path):
-    """Turn the solver's token path (['y', 'U', 'PLL_4', "U'"]) into the actual moves.
+    """Convert solver tokens (e.g. ['y', 'U', 'PLL_11', "U'"]) into executable moves.
 
-    The PLL algorithms are written for yellow on top, but notations.py has yellow
-    on the bottom, so the moves start and end with z2 (flip the cube over, then back).
+    PLL algorithms are written for yellow on top, but notations.py has yellow
+    on the bottom, so moves start and end with z2 (flip over, then back).
     """
     moves = ["z2"]
     for token in path:
@@ -46,93 +58,150 @@ def to_moves(path):
     return moves
 
 
-def cube_from_moves(text):
-    """Build a scrambled cube by applying the *inverse* of your moves.
+def read_matrices():
+    """Read the six matrices from the keyboard, or from a text file given as an argument.
 
-    When you type a PLL algorithm, you want the cube state that *needs* that
-    algorithm to be solved.  Applying the inverse of the moves to a solved cube
-    produces exactly that state.
-
-    Supports R L U D F B, wide moves r l, slices M, rotations x y z, primes and 2.
-    Raises ValueError if a move is not understood.
+    From the keyboard, reading stops once 54 numbers have been entered.
+    A blank first line means "no cube" (the caller makes a random test cube).
     """
-    tokens = text.split()
-    for token in tokens:
-        _expand(token)  # raises ValueError on a bad token
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as file:
+            return file.read()
 
-    # Invert: reverse order, invert each token
-    inv_tokens = [_invert_token(t) for t in reversed(tokens)]
+    lines, found = [], 0
+    while found < 54:
+        try:
+            line = input()
+        except EOFError:
+            break
+        if not line.strip():
+            if found == 0:
+                break
+            continue
+        lines.append(line)
+        found += len(re.findall(r"\d", line))
+    return "\n".join(lines)
+
+
+def cube_from_matrices(text):
+    """Build a cube from six 3x3 matrices of colours 0-5.
+
+    Faces come in the order upper, front, lower, right, left, back, each stored as in
+    notations.py (the same as cube.upper, cube.front, ...). Any layout works: plain
+    rows, nested lists, or a numpy printout, because only the 54 digits are read.
+    Raises ValueError if the cube cannot be a valid white-on-top cube.
+    """
+    digits = [int(d) for d in re.findall(r"\d", text)]
+    if len(digits) != 54:
+        raise ValueError(f"expected 54 numbers (six 3x3 matrices), got {len(digits)}")
+    if max(digits) > 5:
+        raise ValueError("colours must be numbers from 0 to 5")
 
     cube = Cube()
-    flip(cube)
-    for token in inv_tokens:
-        for name in _expand(token):
-            getattr(cube, name)()
-    flip(cube)
+    for i, name in enumerate(FACE_ORDER):
+        setattr(cube, name, np.array(digits[9 * i:9 * i + 9]).reshape(3, 3))
+
+    for colour in range(6):
+        if digits.count(colour) != 9:
+            raise ValueError(f"colour {colour} appears {digits.count(colour)} times, expected 9")
+
+    # Centres: white (0) on upper, yellow (2) on lower, sides in the cube's own order
+    # (a y turn of the solved cube is allowed).
+    if cube.upper[1, 1] != 0 or cube.lower[1, 1] != 2:
+        raise ValueError("upper centre must be 0 (white) and lower centre must be 2 (yellow)")
+    sides = tuple(int(getattr(cube, f)[1, 1]) for f in ("front", "right", "back", "left"))
+    turned, allowed = Cube(), []
+    for _ in range(4):
+        allowed.append(tuple(int(getattr(turned, f)[1, 1]) for f in ("front", "right", "back", "left")))
+        turned.Y()
+    if sides not in allowed:
+        raise ValueError(
+            f"side centres (front, right, back, left) = {sides} do not match the cube's "
+            "colour order; check that the faces are in the order upper, front, lower, right, left, back"
+        )
     return cube
 
 
 def solve_pll(cube, solver=None):
-    """Print every move needed to solve PLL on `cube`, and return the move list.
-
-    The input cube must have OLL solved. It is not changed.
-    Returns None if the solver finds no solution.
-    """
+    """Find and print every move needed to solve PLL on `cube`."""
     solver = solver or PLLSolver(MODEL_PATH)
+
+    if is_pll_solved(cube):
+        print("PLL is already solved on this cube! No moves needed.")
+        return []
 
     path = solver.solve(cube)
     if path is None:
-        print("No solution found.")
+        print("No solution found by the model.")
         return None
-    if not path:
-        print("PLL is already solved.")
-        return []
 
     moves = to_moves(path)
     case_match = next((t for t in path if t.startswith("PLL_")), None)
+
     if case_match:
-        case = case_match[4:]
-        print(f"PLL case {case} solved in {len(moves)} moves: {' '.join(moves)}")
+        case_num = case_match[4:]
+        print(f"\n--- PLL Solution (Case {case_num}) ---")
     else:
-        print(f"PLL skip solved in {len(moves)} moves: {' '.join(moves)}")
-    if not solver.solved(replay):
-        print("Warning: replaying the moves did not solve PLL.")
+        print("\n--- PLL Solution (PLL Skip - AUF Alignment Only) ---")
+    replay = solver.copy_cube(cube)
+    for i, move in enumerate(moves, 1):
+        for name in _expand(move):
+            getattr(replay, name)()
+        print(f"  {i:2d}. {move}")
+
+    move_str = " ".join(moves)
+    print(f"\nSolved in {len(moves)} moves:\n  {move_str}")
+
+    if is_pll_solved(replay):
+        print("\n[SUCCESS] Replaying moves verified: Cube is completely solved!")
+    else:
+        print("\n[WARNING] Replay verification failed.")
+
     return moves
 
 
-if __name__ == "__main__":
-    # Usage:
-    #   python p.py                          asks you to type moves (blank = random cube)
-    #   python p.py "R U R' U R U2 R'"       moves in quotes (PowerShell needs the quotes)
-    #
-    # Your moves are applied to a solved cube with yellow on top, so they must keep
-    # OLL solved. A PLL algorithm (or its inverse) plus U turns works.
-    if len(sys.argv) > 1:
-        text = " ".join(sys.argv[1:])
-    else:
-        text = input("Enter your moves (blank = random test cube): ")
-    text = text.strip()
+def main():
+    # print("=" * 60)
+    # print("                RUBIK'S CUBE PLL SOLVER")
+    # print("=" * 60)
+    print("Enter the scrambled cube as six 3x3 matrices, one row per line.")
+    print("Order: upper, front, lower, right, left, back (as Cube.display() prints).")
+    print("Colours: 0 white, 1 orange, 2 yellow, 3 green, 4 blue, 5 red")
+    print("  - A text file with the six matrices:  python pll_test.py cube.txt")
+    print("  - Blank: generate a random test cube")
+    # print("-" * 60)
+
+    try:
+        text = read_matrices().strip()
+    except OSError as error:
+        print(f"\n[ERROR] Could not read the file: {error}")
+        sys.exit(1)
 
     if text:
         try:
-            cube = cube_from_moves(text)
+            cube = cube_from_matrices(text)
         except ValueError as error:
-            print(f"Could not read the moves: {error}")
+            print(f"\n[ERROR] Invalid cube: {error}")
             sys.exit(1)
+
         if not is_oll_solved(cube):
             print(
-                "These moves break OLL (the yellow face, cross or F2L), so PLL can't be "
-                "solved from this cube.\n"
-                "Use moves that keep OLL solved, such as a PLL algorithm or its inverse, "
-                "with U turns."
+                "\n[ERROR] OLL is not solved on this cube (the yellow face or the F2L is incomplete).\n"
+                "PLL requires OLL to be solved (all yellow facing the bottom and F2L intact)."
             )
             sys.exit(1)
-        print("Cube built from your moves (yellow on top).")
+
+        print("\nCube successfully read from your matrices.")
     else:
         number = random.randint(1, PLL_COUNT)
         frame = random.choice(FRAME_TOKENS)
         pre_turn = random.choice(AUF_TOKENS)
         cube = inverse_case_state(number, frame, pre_turn, "none")
-        print(f"Random test cube: PLL case {number}, rotation {frame}, top-layer turn {pre_turn}")
+        print(f"\nRandom test cube generated:")
+        print(f"  PLL Case: {number} | Viewing Frame: {frame} | Top-layer turn: {pre_turn}")
 
     solve_pll(cube)
+
+
+if __name__ == "__main__":
+    main()
