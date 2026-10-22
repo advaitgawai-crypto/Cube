@@ -142,8 +142,9 @@ class OLLSafe:
         cube.R()
         cube.U()
         cube.U()
-        cube.R_Prime()
         cube.M()
+        cube.R_Prime()
+        cube.U()
         cube.R()
         cube.M_prime()
         cube.U()
@@ -307,8 +308,22 @@ class OLLSafe:
         cube.R()
 
     # 5. G Permutations (Double Cycles - 4 Cases)
-    def algorithm_18(self, cube: Cube):
-        cube.Y()
+    def algorithm_18(self, cube: Cube): # ga_perm
+        cube.R(); cube.R(); cube.U(); cube.R_Prime(); cube.U(); cube.R_Prime()
+        cube.U_Prime(); cube.R(); cube.U_Prime(); cube.R(); cube.R(); cube.U_Prime()
+        cube.D(); cube.R_Prime(); cube.U(); cube.R(); cube.D_Prime()
 
-    def algorithm_19(self, cube: Cube):
-        cube.Y_prime()
+    def algorithm_19(self, cube: Cube): # gb_perm
+        cube.R(); cube.R(); cube.U_Prime(); cube.R(); cube.U_Prime(); cube.R(); cube.U()
+        cube.R_Prime(); cube.U(); cube.R(); cube.R(); cube.D_Prime(); cube.U(); cube.R()
+        cube.U_Prime(); cube.R_Prime(); cube.D()
+        
+    def algorithm_20(self, cube: Cube): # gc_perm
+        cube.R(); cube.R(); cube.U_Prime(); cube.R(); cube.U_Prime(); cube.R(); cube.U()
+        cube.R_Prime(); cube.U(); cube.R(); cube.R(); cube.U(); cube.D_Prime(); cube.R()
+        cube.U_Prime(); cube.R_Prime(); cube.D()
+
+    def algorithm_21(self, cube: Cube): # gd_perm
+        cube.R(); cube.U(); cube.R_Prime(); cube.U_Prime(); cube.D(); cube.R(); cube.R()
+        cube.U_Prime(); cube.R(); cube.U_Prime(); cube.R_Prime(); cube.U(); cube.R_Prime()
+        cube.U(); cube.R(); cube.R(); cube.D_Prime()

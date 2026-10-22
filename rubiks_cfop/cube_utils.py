@@ -2,7 +2,7 @@ from notations import Cube
 import numpy as np
 # order: top --> front --> bottom --> back --> left --> right
 
-cube = Cube()
+# cube = Cube()
 
 def flatten_cube(cube):
     flatFront = cube.front.flatten()
