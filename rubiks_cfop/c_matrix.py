@@ -2,7 +2,7 @@ import os
 import sys
 import numpy as np
 
-from c import read_matrices, cube_from_matrices, solve_cross, FACE_ORDER
+from c import read_matrices, cube_from_matrices, solve_cross, FACE_ORDER, to_standard
 
 def format_matrices(cube):
     """Format the six faces of the cube as text matrices in standard FACE_ORDER."""
@@ -11,7 +11,7 @@ def format_matrices(cube):
         face_arr = getattr(cube, face_name)
         for row in face_arr:
             lines.append(" ".join(str(val) for val in row))
-        lines.append("") # blank line between faces/sections optional or clean spacing
+        lines.append("")
     return "\n".join(lines).strip()
 
 def main():
@@ -47,7 +47,9 @@ def main():
     with open(output_filename, "w") as f:
         f.write(formatted_output)
 
-    print(f"Applied {len(moves)} moves to solve cross and saved updated matrices to {output_filename}.")
+    print(f"\nApplied {len(moves)} moves to solve cross and saved updated matrices to {output_filename}.")
+    if moves:
+        print(f"Moves used: {' '.join(to_standard(m) for m in moves)}")
 
 if __name__ == "__main__":
     main()

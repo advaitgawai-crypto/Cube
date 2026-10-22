@@ -48,7 +48,9 @@ def main():
     with open(output_filename, "w") as f:
         f.write(formatted_output)
 
-    print(f"\nApplied OLL moves and saved updated matrices to {output_filename}.")
+    print(f"\nApplied {len(moves)} moves to solve OLL and saved updated matrices to {output_filename}.")
+    if moves:
+        print(f"Moves used: {' '.join(moves)}")
 
 if __name__ == "__main__":
     main()
