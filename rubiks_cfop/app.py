@@ -1,11 +1,10 @@
 import os
 import subprocess
 import time
-import sys
 import numpy as np
 from flask import Flask, render_template, jsonify, request
 from notations import Cube
-
+import sys
 app = Flask(__name__)
 
 FACE_ORDER = ["upper", "front", "lower", "right", "left", "back"]
@@ -136,3 +135,4 @@ def parse_cfop_output(output):
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
+# app.py

@@ -1,4 +1,3 @@
-// 3D Rubik's Cube with Three.js
 let scene, camera, renderer, controls;
 let cubies = [];
 const cubeGroup = new THREE.Group();
@@ -25,7 +24,9 @@ let internalCube = {
 };
 
 let isAnimating = false;
-const ANIMATION_SPEED = 180; // ms per turn - smooth, fast, clearly visible
+const ANIMATION_SPEED = 140; // ms per turn - responsive and smooth
+const GAP = 0.02;
+const SIZE = 0.98;
 
 function init() {
     const container = document.getElementById("canvas-container");
@@ -44,10 +45,10 @@ function init() {
     controls.dampingFactor = 0.05;
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.45);
     dirLight.position.set(10, 20, 10);
     scene.add(dirLight);
 
@@ -63,49 +64,53 @@ function init() {
 }
 
 function build3DCube() {
-    // Clear previous
-    while(cubeGroup.children.length > 0){ 
-        cubeGroup.remove(cubeGroup.children[0]); 
+    while (cubeGroup.children.length > 0) {
+        cubeGroup.remove(cubeGroup.children[0]);
     }
     cubies = [];
 
-    const gap = 0.02;
-    const size = 0.98;
-    const geometry = new THREE.BoxGeometry(size, size, size);
+    const geometry = new THREE.BoxGeometry(SIZE, SIZE, SIZE);
 
     for (let x = -1; x <= 1; x++) {
         for (let y = -1; y <= 1; y++) {
             for (let z = -1; z <= 1; z++) {
-                const materials = createCubieMaterials(x, y, z);
+                // 6 materials for 6 faces: Right(+X), Left(-X), Upper(+Y), Lower(-Y), Front(+Z), Back(-Z)
+                const materials = [];
+                for (let i = 0; i < 6; i++) {
+                    materials.push(new THREE.MeshLambertMaterial({ color: 0x181818 }));
+                }
                 const cubie = new THREE.Mesh(geometry, materials);
-                cubie.position.set(x * (size + gap), y * (size + gap), z * (size + gap));
+                cubie.position.set(x * (SIZE + GAP), y * (SIZE + GAP), z * (SIZE + GAP));
                 cubie.userData = { customX: x, customY: y, customZ: z };
                 cubeGroup.add(cubie);
                 cubies.push(cubie);
             }
         }
     }
+    updateCubeVisuals();
 }
 
-function createCubieMaterials(x, y, z) {
-    // Right (X+), Left (X-), Upper (Y+), Lower (Y-), Front (Z+), Back (Z-)
-    const materials = [];
-    const blackMat = new THREE.MeshLambertMaterial({ color: 0x181818 });
-
-    // Right: green (3)
-    materials.push(x === 1 ? new THREE.MeshLambertMaterial({ color: COLOR_MAP[3] }) : blackMat);
-    // Left: blue (4)
-    materials.push(x === -1 ? new THREE.MeshLambertMaterial({ color: COLOR_MAP[4] }) : blackMat);
-    // Upper: white (0)
-    materials.push(y === 1 ? new THREE.MeshLambertMaterial({ color: COLOR_MAP[0] }) : blackMat);
-    // Lower: yellow (2)
-    materials.push(y === -1 ? new THREE.MeshLambertMaterial({ color: COLOR_MAP[2] }) : blackMat);
-    // Front: orange (1)
-    materials.push(z === 1 ? new THREE.MeshLambertMaterial({ color: COLOR_MAP[1] }) : blackMat);
-    // Back: red (5)
-    materials.push(z === -1 ? new THREE.MeshLambertMaterial({ color: COLOR_MAP[5] }) : blackMat);
-
-    return materials;
+/**
+ * Updates each cubie's face colors directly from internalCube.
+ * Guarantees zero coordinate drift, zero desync, and 100% accurate rendering.
+ */
+function updateCubeVisuals() {
+    const black = 0x181818;
+    for (let c of cubies) {
+        const { customX: x, customY: y, customZ: z } = c.userData;
+        // 0: Right (+X)
+        c.material[0].color.setHex(x === 1 ? COLOR_MAP[internalCube.right[1 - y][1 - z]] : black);
+        // 1: Left (-X)
+        c.material[1].color.setHex(x === -1 ? COLOR_MAP[internalCube.left[1 - y][z + 1]] : black);
+        // 2: Upper (+Y)
+        c.material[2].color.setHex(y === 1 ? COLOR_MAP[internalCube.upper[z + 1][x + 1]] : black);
+        // 3: Lower (-Y)
+        c.material[3].color.setHex(y === -1 ? COLOR_MAP[internalCube.lower[1 - z][x + 1]] : black);
+        // 4: Front (+Z)
+        c.material[4].color.setHex(z === 1 ? COLOR_MAP[internalCube.front[1 - y][x + 1]] : black);
+        // 5: Back (-Z)
+        c.material[5].color.setHex(z === -1 ? COLOR_MAP[internalCube.back[1 - y][1 - x]] : black);
+    }
 }
 
 function animate() {
@@ -122,39 +127,52 @@ function onWindowResize() {
 }
 
 // -------------------------------------------------------------
-// LOGICAL MATRIX ROTATIONS & FILE SYNC
+// LOGICAL MATRIX ROTATIONS & MOVE PARSING
 // -------------------------------------------------------------
 function rot90CW(mat) {
+    // Equivalent to numpy np.rot90(mat, -1)
     return mat[0].map((val, index) => mat.map(row => row[index]).reverse());
 }
+
 function rot90CCW(mat) {
-    return mat[0].map((val, index) => mat.map(row => row[index])).reverse();
+    // Equivalent to numpy np.rot90(mat, 1)
+    return mat[0].map((val, index) => mat.map(row => row[row.length - 1 - index]));
 }
 
 function applyLogicalMove(move) {
     const c = internalCube;
     let temp;
 
-    switch(move) {
+    switch (move) {
         case "R":
-            temp = [c.upper[0][2], c.upper[1][2], c.upper[2][2]];
-            c.upper[0][2] = c.front[0][2]; c.upper[1][2] = c.front[1][2]; c.upper[2][2] = c.front[2][2];
-            c.front[0][2] = c.lower[0][2]; c.front[1][2] = c.lower[1][2]; c.front[2][2] = c.lower[2][2];
-            c.lower[0][2] = c.back[2][0];  c.lower[1][2] = c.back[1][0];  c.lower[2][2] = c.back[0][0];
-            c.back[2][0] = temp[0];       c.back[1][0] = temp[1];       c.back[0][0] = temp[2];
+            const uColR = [c.upper[0][2], c.upper[1][2], c.upper[2][2]];
+            const fColR = [c.front[0][2], c.front[1][2], c.front[2][2]];
+            const lColR = [c.lower[0][2], c.lower[1][2], c.lower[2][2]];
+            const bColR = [c.back[0][0], c.back[1][0], c.back[2][0]];
+            for (let i = 0; i < 3; i++) {
+                c.upper[i][2] = fColR[i];
+                c.front[i][2] = lColR[i];
+                c.lower[i][2] = bColR[2 - i];
+                c.back[i][0]  = uColR[2 - i];
+            }
             c.right = rot90CW(c.right);
             break;
-        case "R'": for(let i=0; i<3; i++) applyLogicalMove("R"); break;
+        case "R'": for (let i = 0; i < 3; i++) applyLogicalMove("R"); break;
 
         case "L":
-            temp = [c.upper[0][0], c.upper[1][0], c.upper[2][0]];
-            c.upper[0][0] = c.back[2][2];  c.upper[1][0] = c.back[1][2];  c.upper[2][0] = c.back[0][2];
-            c.back[2][2] = c.lower[0][0];  c.back[1][2] = c.lower[1][0];  c.back[0][2] = c.lower[2][0];
-            c.lower[0][0] = c.front[0][0]; c.lower[1][0] = c.front[1][0]; c.lower[2][0] = c.front[2][0];
-            c.front[0][0] = temp[0];       c.front[1][0] = temp[1];       c.front[2][0] = temp[2];
+            const uColL = [c.upper[0][0], c.upper[1][0], c.upper[2][0]];
+            const fColL = [c.front[0][0], c.front[1][0], c.front[2][0]];
+            const lColL = [c.lower[0][0], c.lower[1][0], c.lower[2][0]];
+            const bColL = [c.back[0][2], c.back[1][2], c.back[2][2]];
+            for (let i = 0; i < 3; i++) {
+                c.upper[i][0] = bColL[2 - i];
+                c.back[i][2]  = lColL[2 - i];
+                c.lower[i][0] = fColL[i];
+                c.front[i][0] = uColL[i];
+            }
             c.left = rot90CW(c.left);
             break;
-        case "L'": for(let i=0; i<3; i++) applyLogicalMove("L"); break;
+        case "L'": for (let i = 0; i < 3; i++) applyLogicalMove("L"); break;
 
         case "U":
             temp = [...c.front[0]];
@@ -164,7 +182,7 @@ function applyLogicalMove(move) {
             c.left[0]  = temp;
             c.upper = rot90CW(c.upper);
             break;
-        case "U'": for(let i=0; i<3; i++) applyLogicalMove("U"); break;
+        case "U'": for (let i = 0; i < 3; i++) applyLogicalMove("U"); break;
 
         case "D":
             temp = [...c.front[2]];
@@ -174,55 +192,93 @@ function applyLogicalMove(move) {
             c.right[2] = temp;
             c.lower = rot90CW(c.lower);
             break;
-        case "D'": for(let i=0; i<3; i++) applyLogicalMove("D"); break;
+        case "D'": for (let i = 0; i < 3; i++) applyLogicalMove("D"); break;
 
         case "F":
-            temp = [...c.upper[2]];
-            c.upper[2] = [c.left[2][2], c.left[1][2], c.left[0][2]];
-            c.left[0][2] = c.lower[0][0]; c.left[1][2] = c.lower[0][1]; c.left[2][2] = c.lower[0][2];
-            c.lower[0][0] = c.right[2][0]; c.lower[0][1] = c.right[1][0]; c.lower[0][2] = c.right[0][0];
-            c.right[0][0] = temp[0]; c.right[1][0] = temp[1]; c.right[2][0] = temp[2];
+            const uRowF = [...c.upper[2]];
+            const lColF = [c.left[0][2], c.left[1][2], c.left[2][2]];
+            const dRowF = [...c.lower[0]];
+            const rColF = [c.right[0][0], c.right[1][0], c.right[2][0]];
+            for (let i = 0; i < 3; i++) {
+                c.upper[2][i] = lColF[2 - i];
+                c.left[i][2]  = dRowF[i];
+                c.lower[0][i] = rColF[2 - i];
+                c.right[i][0] = uRowF[i];
+            }
             c.front = rot90CW(c.front);
             break;
-        case "F'": for(let i=0; i<3; i++) applyLogicalMove("F"); break;
+        case "F'": for (let i = 0; i < 3; i++) applyLogicalMove("F"); break;
 
         case "B":
-            temp = [...c.upper[0]];
-            c.upper[0] = [c.right[0][2], c.right[1][2], c.right[2][2]];
-            c.right[0][2] = c.lower[2][2]; c.right[1][2] = c.lower[2][1]; c.right[2][2] = c.lower[2][0];
-            c.lower[2][0] = c.left[0][0]; c.lower[2][1] = c.left[1][0]; c.lower[2][2] = c.left[2][0];
-            c.left[0][0] = temp[2]; c.left[1][0] = temp[1]; c.left[2][0] = temp[0];
+            const uRowB = [...c.upper[0]];
+            const rColB = [c.right[0][2], c.right[1][2], c.right[2][2]];
+            const dRowB = [...c.lower[2]];
+            const lColB = [c.left[0][0], c.left[1][0], c.left[2][0]];
+            for (let i = 0; i < 3; i++) {
+                c.upper[0][i] = rColB[i];
+                c.right[i][2] = dRowB[2 - i];
+                c.lower[2][i] = lColB[i];
+                c.left[i][0]  = uRowB[2 - i];
+            }
             c.back = rot90CW(c.back);
             break;
-        case "B'": for(let i=0; i<3; i++) applyLogicalMove("B"); break;
+        case "B'": for (let i = 0; i < 3; i++) applyLogicalMove("B"); break;
 
-        case "X":
-        case "x":
-            temp = c.upper; c.upper = c.front; c.front = c.lower;
-            c.lower = c.back.map(row => [...row].reverse()).reverse();
-            c.back = temp.map(row => [...row].reverse()).reverse();
-            c.right = rot90CW(c.right); c.left = rot90CCW(c.left);
+        case "X": case "x":
+            temp = c.upper.map(r => [...r]);
+            c.upper = c.front.map(r => [...r]);
+            c.front = c.lower.map(r => [...r]);
+            c.lower = c.back.map(r => [...r].reverse()).reverse();
+            c.back  = temp.map(r => [...r].reverse()).reverse();
+            c.right = rot90CW(c.right);
+            c.left  = rot90CCW(c.left);
             break;
-        case "X'": case "x'": for(let i=0; i<3; i++) applyLogicalMove("X"); break;
+        case "X'": case "x'": for (let i = 0; i < 3; i++) applyLogicalMove("X"); break;
 
         case "Y": case "y":
-            temp = c.front; c.front = c.right; c.right = c.back; c.back = c.left; c.left = temp;
-            c.upper = rot90CW(c.upper); c.lower = rot90CCW(c.lower);
+            temp = c.front.map(r => [...r]);
+            c.front = c.right.map(r => [...r]);
+            c.right = c.back.map(r => [...r]);
+            c.back  = c.left.map(r => [...r]);
+            c.left  = temp;
+            c.upper = rot90CW(c.upper);
+            c.lower = rot90CCW(c.lower);
             break;
-        case "Y'": case "y'": for(let i=0; i<3; i++) applyLogicalMove("Y"); break;
+        case "Y'": case "y'": for (let i = 0; i < 3; i++) applyLogicalMove("Y"); break;
 
         case "Z": case "z":
-            applyLogicalMove("X"); applyLogicalMove("Y"); applyLogicalMove("X'");
+            temp = c.upper.map(r => [...r]);
+            c.upper = rot90CW(c.left);
+            c.left  = rot90CW(c.lower);
+            c.lower = rot90CW(c.right);
+            c.right = rot90CW(temp);
+            c.front = rot90CW(c.front);
+            c.back  = rot90CCW(c.back);
             break;
-        case "Z'": case "z'": for(let i=0; i<3; i++) applyLogicalMove("Z"); break;
+        case "Z'": case "z'": for (let i = 0; i < 3; i++) applyLogicalMove("Z"); break;
     }
 
-    // Handle double turns (e.g. U2, X2)
     if (move.endsWith("2")) {
         const base = move.slice(0, -1);
         applyLogicalMove(base);
         applyLogicalMove(base);
     }
+}
+
+/**
+ * Expand wide moves and slice moves to primitive turns matching oll_algorithms.py.
+ */
+function expandMove(token) {
+    const table = {
+        "l'": ["R'", "X"],
+        "l":  ["X'", "R"],
+        "r":  ["L", "X"],
+        "r'": ["X'", "L'"],
+        "M'": ["R'", "X", "L"],
+        "M":  ["R", "X'", "L'"],
+        "M2": ["R'", "X", "L", "R'", "X", "L"]
+    };
+    return table[token] || [token];
 }
 
 function syncMatrixToFile() {
@@ -236,27 +292,32 @@ function syncMatrixToFile() {
 // -------------------------------------------------------------
 // ANIMATING THE 3D CUBE VISUALLY
 // -------------------------------------------------------------
-function animate3DMove(move) {
+function animateSingleMove(move) {
     return new Promise((resolve) => {
         let axis = new THREE.Vector3(0, 1, 0);
         let angle = -Math.PI / 2;
-        let selector = (c) => true;
+        let selector = () => true;
 
         const isPrime = move.includes("'");
-        const isDouble = move.includes("2");
-
+        const isDouble = move.endsWith("2");
         const base = move.replace("'", "").replace("2", "").toUpperCase();
 
         switch (base) {
-            case "U": axis.set(0, 1, 0); angle = -Math.PI / 2; selector = c => c.position.y > 0.5; break;
-            case "D": axis.set(0, 1, 0); angle = Math.PI / 2; selector = c => c.position.y < -0.5; break;
-            case "R": axis.set(1, 0, 0); angle = -Math.PI / 2; selector = c => c.position.x > 0.5; break;
-            case "L": axis.set(1, 0, 0); angle = Math.PI / 2; selector = c => c.position.x < -0.5; break;
-            case "F": axis.set(0, 0, 1); angle = -Math.PI / 2; selector = c => c.position.z > 0.5; break;
-            case "B": axis.set(0, 0, 1); angle = Math.PI / 2; selector = c => c.position.z < -0.5; break;
-            case "X": axis.set(1, 0, 0); angle = -Math.PI / 2; selector = c => true; break;
-            case "Y": axis.set(0, 1, 0); angle = -Math.PI / 2; selector = c => true; break;
-            case "Z": axis.set(0, 0, 1); angle = -Math.PI / 2; selector = c => true; break;
+            case "U": axis.set(0, 1, 0); angle = -Math.PI / 2; selector = c => c.userData.customY === 1; break;
+            case "D": axis.set(0, 1, 0); angle = Math.PI / 2; selector = c => c.userData.customY === -1; break;
+            case "R": axis.set(1, 0, 0); angle = -Math.PI / 2; selector = c => c.userData.customX === 1; break;
+            case "L": axis.set(1, 0, 0); angle = Math.PI / 2; selector = c => c.userData.customX === -1; break;
+            case "F": axis.set(0, 0, 1); angle = -Math.PI / 2; selector = c => c.userData.customZ === 1; break;
+            case "B": axis.set(0, 0, 1); angle = Math.PI / 2; selector = c => c.userData.customZ === -1; break;
+            case "X": axis.set(1, 0, 0); angle = -Math.PI / 2; selector = () => true; break;
+            case "Y": axis.set(0, 1, 0); angle = -Math.PI / 2; selector = () => true; break;
+            case "Z": axis.set(0, 0, 1); angle = -Math.PI / 2; selector = () => true; break;
+            default:
+                // Unknown move - update logical state and resolve
+                applyLogicalMove(move);
+                updateCubeVisuals();
+                resolve();
+                return;
         }
 
         if (isPrime) angle = -angle;
@@ -266,7 +327,10 @@ function animate3DMove(move) {
         const pivot = new THREE.Group();
         scene.add(pivot);
 
-        movingCubies.forEach(c => pivot.add(c));
+        movingCubies.forEach(c => {
+            cubeGroup.remove(c);
+            pivot.add(c);
+        });
 
         const startTime = performance.now();
         const duration = ANIMATION_SPEED;
@@ -282,21 +346,22 @@ function animate3DMove(move) {
             if (progress < 1.0) {
                 requestAnimationFrame(step);
             } else {
-                // Finalize positions
-                pivot.updateMatrixWorld();
+                // Return cubies to cubeGroup at fixed original positions
                 movingCubies.forEach(c => {
-                    c.applyMatrix4(pivot.matrixWorld);
-                    scene.add(c);
-                    // Snap coordinates to integers
-                    c.position.x = Math.round(c.position.x * 10) / 10;
-                    c.position.y = Math.round(c.position.y * 10) / 10;
-                    c.position.z = Math.round(c.position.z * 10) / 10;
+                    pivot.remove(c);
+                    c.position.set(
+                        c.userData.customX * (SIZE + GAP),
+                        c.userData.customY * (SIZE + GAP),
+                        c.userData.customZ * (SIZE + GAP)
+                    );
+                    c.rotation.set(0, 0, 0);
+                    cubeGroup.add(c);
                 });
                 scene.remove(pivot);
 
-                // Update logical state & sync file
+                // Update logical state and refresh all cubie stickers
                 applyLogicalMove(move);
-                syncMatrixToFile();
+                updateCubeVisuals();
                 resolve();
             }
         }
@@ -304,7 +369,21 @@ function animate3DMove(move) {
         requestAnimationFrame(step);
     });
 }
-// Solve Button
+
+/**
+ * Execute a move (expanding wide moves and slice moves as needed).
+ * shouldSync = true only on manual moves or final solve step.
+ */
+async function executeMove(move, shouldSync = false) {
+    const subMoves = expandMove(move);
+    for (const sub of subMoves) {
+        await animateSingleMove(sub);
+    }
+    if (shouldSync) {
+        syncMatrixToFile();
+    }
+}
+
 // -------------------------------------------------------------
 // EVENT LISTENERS & SOLVER INTEGRATION
 // -------------------------------------------------------------
@@ -316,7 +395,7 @@ function setupEventListeners() {
             isAnimating = true;
             const move = btn.getAttribute("data-move");
             document.getElementById("animation-status").innerText = "Executing " + move;
-            await animate3DMove(move);
+            await executeMove(move, true);
             document.getElementById("animation-status").innerText = "Ready";
             isAnimating = false;
         });
@@ -333,9 +412,10 @@ function setupEventListeners() {
             left:  Array(3).fill(0).map(() => Array(3).fill(4)),
             back:  Array(3).fill(0).map(() => Array(3).fill(5))
         };
-        build3DCube();
+        updateCubeVisuals();
         syncMatrixToFile();
         clearUI();
+        document.getElementById("animation-status").innerText = "Ready";
     });
 
     // Scramble Button
@@ -346,8 +426,9 @@ function setupEventListeners() {
         document.getElementById("animation-status").innerText = "Scrambling...";
         for (let i = 0; i < 10; i++) {
             const randMove = moves[Math.floor(Math.random() * moves.length)];
-            await animate3DMove(randMove);
+            await executeMove(randMove, false);
         }
+        syncMatrixToFile();
         document.getElementById("animation-status").innerText = "Ready";
         isAnimating = false;
     });
@@ -357,7 +438,7 @@ function setupEventListeners() {
         if (isAnimating) return;
         isAnimating = true;
         document.getElementById("animation-status").innerText = "Solving CFOP...";
-        // await syncMatrixToFile();
+
         try {
             const res = await fetch("/api/solve", { method: "POST" });
             const data = await res.json();
@@ -372,16 +453,18 @@ function setupEventListeners() {
             const parsed = data.parsed;
             updateSolverUI(parsed);
 
-            // Execute solution moves sequentially
+            // Execute solution moves sequentially WITHOUT spamming matrix.txt on each step
             const allMoves = parsed.total_moves;
             document.getElementById("animation-status").innerText = "Animating Solution...";
 
             for (let i = 0; i < allMoves.length; i++) {
                 const move = allMoves[i];
                 highlightMoveToken(i);
-                await animate3DMove(move);
+                await executeMove(move, false);
             }
 
+            // Sync the clean solved cube state once at the very end
+            syncMatrixToFile();
             document.getElementById("animation-status").innerText = "Cube Solved!";
         } catch (err) {
             alert("Failed to solve: " + err);

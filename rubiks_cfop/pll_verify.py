@@ -17,9 +17,27 @@ _pll = PLLAlgorithms()
 
 
 def is_pll_solved(cube):
-    """True if every face is one colour. Any whole-cube orientation counts as solved."""
-    return all(np.all(getattr(cube, f) == getattr(cube, f)[0, 0]) for f in FACES)
-
+    """True if every face is one colour and the side centers match a valid y-rotated solved state."""
+    solved_cube = Cube()
+    
+    # 1. Check that every face is uniform (solid color)
+    faces_uniform = all(np.all(getattr(cube, f) == getattr(cube, f)[0, 0]) for f in FACES)
+    if not faces_uniform:
+        return False
+    
+    # 2. Upper must be white (0) and lower must be yellow (2)
+    if cube.upper[1, 1] != solved_cube.upper[1, 1] or cube.lower[1, 1] != solved_cube.lower[1, 1]:
+        return False
+        
+    # 3. Side centers (front, right, back, left) can be rotated by y turns
+    sides = tuple(int(getattr(cube, f)[1, 1]) for f in ("front", "right", "back", "left"))
+    allowed = []
+    turned = Cube()
+    for _ in range(4):
+        allowed.append(tuple(int(getattr(turned, f)[1, 1]) for f in ("front", "right", "back", "left")))
+        turned.Y()
+        
+    return sides in allowed
 
 def apply_triple(cube, frame, pre, alg, post):
     """Apply frame, pre-AUF, PLL algorithm `alg`, post-AUF to `cube` in place.
@@ -53,7 +71,7 @@ def verify(cube, frame, pre, alg, post):
     apply_triple(trial, frame, pre, alg, post)
     if is_pll_solved(trial):
         return True, "ok"
-    return False, "not all faces uniform"
+    return False, "not all faces uniform or centers misaligned"
 
 
 def _clone(cube):
@@ -118,9 +136,6 @@ def inverse_case_state(n, frame="none", pre="none", post="none"):
 
 
 if __name__ == "__main__":
-    # Positive check: every (frame, pre, post) combination applied to its own
-    # inverse state must solve. Negative check: a solved cube with PLL n applied
-    # must not be solved, because every PLL case is a permutation of the last layer.
     positive_failures = []
     for n in range(1, PLL_COUNT + 1):
         for frame in FRAME_TOKENS:
