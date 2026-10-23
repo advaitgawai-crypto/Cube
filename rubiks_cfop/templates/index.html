@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Rubik's Cube CFOP Solver</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Panel: Move Log & Solver Details -->
+        <div class="panel left-panel">
+            <h2>CFOP Solver Panel</h2>
+            <div class="action-buttons">
+                <button id="solve-btn" class="btn btn-primary">⚡ Solve Cube (CFOP)</button>
+                <button id="reset-btn" class="btn btn-danger">↺ Reset Cube</button>
+            </div>
+
+            <div id="solver-info" class="solver-info-box">
+                <h3>Solve Statistics</h3>
+                <p><strong>Total Time:</strong> <span id="total-time">--</span></p>
+                <p><strong>Total Moves:</strong> <span id="total-moves-count">--</span></p>
+                <div class="stage-times">
+                    <div><span>Cross:</span> <span id="cross-time">--</span></div>
+                    <div><span>F2L:</span> <span id="f2l-time">--</span></div>
+                    <div><span>OLL:</span> <span id="oll-time">--</span></div>
+                    <div><span>PLL:</span> <span id="pll-time">--</span></div>
+                </div>
+            </div>
+
+            <div class="moves-log-container">
+                <h3>Solution Breakdown</h3>
+                <div id="stage-moves" class="stage-moves-list">
+                    <p class="placeholder">Click "Solve Cube" to run CFOP solver...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Panel: 3D Canvas -->
+        <div class="panel center-panel">
+            <div id="canvas-container"></div>
+            <div id="animation-status" class="status-overlay">Ready</div>
+        </div>
+
+        <!-- Right Panel: Manual Control Buttons -->
+        <div class="panel right-panel">
+            <h2>Cube Controls</h2>
+
+            <div class="control-group">
+                <h3>Basic Face Turns</h3>
+                <div class="btn-grid">
+                    <button class="move-btn" data-move="U">U</button>
+                    <button class="move-btn" data-move="U'">U'</button>
+                    <button class="move-btn" data-move="D">D</button>
+                    <button class="move-btn" data-move="D'">D'</button>
+                    <button class="move-btn" data-move="R">R</button>
+                    <button class="move-btn" data-move="R'">R'</button>
+                    <button class="move-btn" data-move="L">L</button>
+                    <button class="move-btn" data-move="L'">L'</button>
+                    <button class="move-btn" data-move="F">F</button>
+                    <button class="move-btn" data-move="F'">F'</button>
+                    <button class="move-btn" data-move="B">B</button>
+                    <button class="move-btn" data-move="B'">B'</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Whole Cube Rotations</h3>
+                <div class="btn-grid">
+                    <button class="move-btn" data-move="X">X</button>
+                    <button class="move-btn" data-move="X'">X'</button>
+                    <button class="move-btn" data-move="Y">Y</button>
+                    <button class="move-btn" data-move="Y'">Y'</button>
+                    <button class="move-btn" data-move="Z">Z</button>
+                    <button class="move-btn" data-move="Z'">Z'</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Quick Scramble</h3>
+                <button id="scramble-btn" class="btn btn-secondary">🔀 Random Scramble (10 Moves)</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/cube.js"></script>
+</body>
+</html>
