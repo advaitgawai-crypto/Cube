@@ -1,23 +1,49 @@
+/* =============================================================
+   3D Rubik's Cube CFOP Solver - Responsive Stylesheet
+   Supports Desktop, Tablet, and Mobile Devices
+============================================================= */
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #141418;
+}
+::-webkit-scrollbar-thumb {
+    background: #33333e;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #444455;
 }
 
 body {
     background-color: #121214;
     color: #e1e1e6;
     height: 100vh;
+    width: 100%;
     overflow: hidden;
 }
 
+/* App Container (Desktop Default: 3-column Layout) */
 .app-container {
     display: flex;
     height: 100vh;
     width: 100vw;
+    overflow: hidden;
 }
 
+/* Panels Common */
 .panel {
     padding: 20px;
     display: flex;
@@ -25,161 +51,213 @@ body {
     gap: 15px;
     background-color: #1a1a1e;
     border-right: 1px solid #2a2a30;
+    position: relative;
 }
 
+/* Left Panel: Solver & Statistics */
 .left-panel {
     width: 320px;
     min-width: 300px;
+    flex-shrink: 0;
+    overflow-y: auto;
 }
 
+/* Center Panel: 3D Canvas */
 .center-panel {
     flex: 1;
     position: relative;
-    background: radial-gradient(circle at center, #23232a 0%, #0d0d0f 100%);
+    background: radial-gradient(circle at center, #252532 0%, #0c0c0e 100%);
     padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
 #canvas-container {
     width: 100%;
     height: 100%;
+    display: block;
+    touch-action: none; /* Allows Three.js OrbitControls to receive touch gestures smoothly */
 }
 
+/* Right Panel: Manual Controls */
 .right-panel {
     width: 300px;
     min-width: 280px;
+    flex-shrink: 0;
     border-left: 1px solid #2a2a30;
     border-right: none;
+    overflow-y: auto;
 }
 
+/* Typography */
 h2 {
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1.15rem;
+    font-weight: 700;
     color: #00e676;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     border-bottom: 1px solid #2a2a30;
     padding-bottom: 8px;
 }
 
 h3 {
-    font-size: 0.95rem;
-    color: #a0a0b0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #9e9eb0;
     margin-bottom: 8px;
 }
 
+/* Buttons */
 .action-buttons {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .btn {
-    padding: 10px 15px;
+    padding: 12px 16px;
     border: none;
-    border-radius: 6px;
-    font-weight: 600;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    user-select: none;
 }
 
 .btn-primary {
     background-color: #00e676;
     color: #000;
+    box-shadow: 0 4px 12px rgba(0, 230, 118, 0.2);
 }
 .btn-primary:hover {
     background-color: #00c853;
     transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 230, 118, 0.35);
+}
+.btn-primary:active {
+    transform: translateY(1px);
 }
 
 .btn-secondary {
-    background-color: #33333d;
+    background-color: #2b2b36;
     color: #fff;
-    border: 1px solid #444452;
+    border: 1px solid #414152;
 }
 .btn-secondary:hover {
-    background-color: #444452;
+    background-color: #3b3b4a;
+    border-color: #55556a;
+}
+.btn-secondary:active {
+    background-color: #24242e;
 }
 
 .btn-danger {
-    background-color: #ff5252;
+    background-color: #ff3d57;
     color: #fff;
 }
 .btn-danger:hover {
-    background-color: #ff1744;
+    background-color: #e02842;
+}
+.btn-danger:active {
+    background-color: #c01e34;
 }
 
+/* Solver Info Box */
 .solver-info-box {
-    background-color: #121215;
+    background-color: #131317;
     border-radius: 8px;
     padding: 12px;
-    border: 1px solid #2a2a32;
+    border: 1px solid #282832;
 }
 
 .solver-info-box p {
     margin: 4px 0;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    color: #d1d1dc;
 }
 
 .stage-times {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
-    margin-top: 8px;
+    margin-top: 10px;
     font-size: 0.82rem;
-    color: #b0b0c0;
-    background: #18181f;
-    padding: 8px;
-    border-radius: 4px;
+    color: #a8a8ba;
+    background: #1a1a22;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #242430;
 }
 
+/* Solution Moves Log */
 .moves-log-container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background-color: #121215;
+    background-color: #131317;
     border-radius: 8px;
     padding: 12px;
-    border: 1px solid #2a2a32;
+    border: 1px solid #282832;
+    min-height: 140px;
     overflow: hidden;
 }
 
 .stage-moves-list {
     flex: 1;
     overflow-y: auto;
-    font-family: monospace;
+    font-family: 'Consolas', 'Courier New', monospace;
     font-size: 0.85rem;
-    line-height: 1.5;
+    line-height: 1.6;
+    padding-right: 4px;
 }
 
 .stage-moves-list .placeholder {
-    color: #666;
+    color: #656577;
     font-style: italic;
+    font-family: inherit;
 }
 
 .stage-block {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .stage-title {
-    color: #00b0ff;
-    font-weight: bold;
+    color: #29b6f6;
+    font-weight: 700;
+    font-size: 0.88rem;
+    margin-bottom: 4px;
 }
 
 .move-token {
     display: inline-block;
-    padding: 2px 6px;
+    padding: 2px 7px;
     margin: 2px;
-    background: #252530;
-    border-radius: 3px;
-    color: #fff;
+    background: #252532;
+    border-radius: 4px;
+    color: #e0e0ea;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid #323242;
+    transition: all 0.15s ease;
 }
 
 .move-token.active {
     background: #00e676;
     color: #000;
-    font-weight: bold;
+    font-weight: 800;
+    border-color: #00e676;
+    box-shadow: 0 0 8px rgba(0, 230, 118, 0.6);
+    transform: scale(1.08);
 }
 
+/* Cube Controls */
 .control-group {
     margin-bottom: 15px;
 }
@@ -191,30 +269,210 @@ h3 {
 }
 
 .move-btn {
-    padding: 10px 4px;
-    background-color: #24242c;
-    color: #fff;
-    border: 1px solid #363642;
+    min-height: 40px;
+    padding: 8px 4px;
+    background-color: #252530;
+    color: #f0f0f8;
+    border: 1px solid #363646;
     border-radius: 6px;
     font-size: 0.9rem;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
 }
 
 .move-btn:hover {
     background-color: #00e676;
     color: #000;
+    border-color: #00e676;
+    transform: translateY(-1px);
 }
 
+.move-btn:active {
+    transform: translateY(1px);
+}
+
+/* Status Badge */
 .status-overlay {
     position: absolute;
-    top: 15px;
-    left: 15px;
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 6px 12px;
+    top: 16px;
+    left: 16px;
+    background-color: rgba(14, 14, 18, 0.85);
+    backdrop-filter: blur(8px);
+    padding: 6px 14px;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 700;
     color: #00e676;
-    border: 1px solid #00e676;
+    border: 1px solid rgba(0, 230, 118, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* =============================================================
+   TABLET RESPONSIVENESS (769px - 1024px)
+============================================================= */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .app-container {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+    }
+
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+    }
+
+    .center-panel {
+        order: 1;
+        width: 100%;
+        height: 52vh;
+        min-height: 380px;
+        border-bottom: 2px solid #2a2a32;
+    }
+
+    .left-panel {
+        order: 2;
+        width: 50%;
+        border-right: 1px solid #2a2a30;
+        border-bottom: none;
+    }
+
+    .right-panel {
+        order: 3;
+        width: 50%;
+        border-left: none;
+    }
+
+    /* Wrap panels side-by-side below canvas */
+    .app-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+    }
+
+    .center-panel {
+        grid-column: 1 / -1;
+    }
+
+    .moves-log-container {
+        max-height: 280px;
+    }
+}
+
+/* =============================================================
+   MOBILE DEVICES (<= 768px)
+============================================================= */
+@media (max-width: 768px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .app-container {
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        width: 100%;
+        overflow: visible;
+    }
+
+    /* 3D Cube Canvas: Stays at the top for prominent visual interaction */
+    .center-panel {
+        order: 1;
+        width: 100%;
+        height: 48vh;
+        min-height: 300px;
+        max-height: 450px;
+        border-bottom: 2px solid #282835;
+        border-right: none;
+    }
+
+    .status-overlay {
+        top: 12px;
+        left: 12px;
+        font-size: 0.78rem;
+        padding: 5px 12px;
+    }
+
+    /* Left Panel: Solver & Controls placed right underneath */
+    .left-panel {
+        order: 2;
+        width: 100%;
+        min-width: 0;
+        padding: 16px 14px;
+        border-right: none;
+        border-bottom: 1px solid #282835;
+    }
+
+    .action-buttons {
+        flex-direction: row;
+        gap: 10px;
+    }
+
+    .action-buttons .btn {
+        flex: 1;
+        min-height: 44px; /* Accessible touch target */
+        font-size: 0.95rem;
+    }
+
+    .moves-log-container {
+        max-height: 220px;
+        min-height: 120px;
+    }
+
+    /* Right Panel: Interactive Cube Controls */
+    .right-panel {
+        order: 3;
+        width: 100%;
+        min-width: 0;
+        padding: 16px 14px;
+        border-left: none;
+    }
+
+    .btn-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    .move-btn {
+        min-height: 44px; /* Thumb-friendly tap size */
+        font-size: 0.95rem;
+    }
+
+    .control-group h3 {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+    }
+
+    .btn-secondary {
+        min-height: 44px;
+        font-size: 0.92rem;
+    }
+}
+
+/* Very Small Mobile Screens (<= 380px) */
+@media (max-width: 380px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .center-panel {
+        height: 42vh;
+        min-height: 270px;
+    }
+
+    .btn-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
