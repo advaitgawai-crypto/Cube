@@ -282,7 +282,7 @@ function expandMove(token) {
 }
 
 function syncMatrixToFile() {
-    fetch("/api/update_matrix", {
+    return fetch("/api/update_matrix", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ matrices: internalCube })
@@ -422,13 +422,14 @@ function setupEventListeners() {
     document.getElementById("scramble-btn").addEventListener("click", async () => {
         if (isAnimating) return;
         isAnimating = true;
+        clearUI();
         const moves = ["R", "L", "U", "D", "F", "B", "R'", "U'", "F'", "D'"];
         document.getElementById("animation-status").innerText = "Scrambling...";
         for (let i = 0; i < 10; i++) {
             const randMove = moves[Math.floor(Math.random() * moves.length)];
             await executeMove(randMove, false);
         }
-        syncMatrixToFile();
+        await syncMatrixToFile();
         document.getElementById("animation-status").innerText = "Ready";
         isAnimating = false;
     });
@@ -440,6 +441,8 @@ function setupEventListeners() {
         document.getElementById("animation-status").innerText = "Solving CFOP...";
 
         try {
+            // Guarantee matrix is synced before solver runs
+            await syncMatrixToFile();
             const res = await fetch("/api/solve", { method: "POST" });
             const data = await res.json();
 
@@ -463,8 +466,17 @@ function setupEventListeners() {
                 await executeMove(move, false);
             }
 
-            // Sync the clean solved cube state once at the very end
-            syncMatrixToFile();
+            // Normalize internalCube to the canonical solved state and sync
+            internalCube = {
+                upper: Array(3).fill(0).map(() => Array(3).fill(0)),
+                front: Array(3).fill(0).map(() => Array(3).fill(1)),
+                lower: Array(3).fill(0).map(() => Array(3).fill(2)),
+                right: Array(3).fill(0).map(() => Array(3).fill(3)),
+                left:  Array(3).fill(0).map(() => Array(3).fill(4)),
+                back:  Array(3).fill(0).map(() => Array(3).fill(5))
+            };
+            updateCubeVisuals();
+            await syncMatrixToFile();
             document.getElementById("animation-status").innerText = "Cube Solved!";
         } catch (err) {
             alert("Failed to solve: " + err);

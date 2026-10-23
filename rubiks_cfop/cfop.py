@@ -54,6 +54,13 @@ def main():
     total_moves = []
     start_total_time = time.time()
 
+    # Align Y-rotation if necessary so front center is 1 (orange)
+    align_y_moves = []
+    while cube.front[1, 1] != 1 and len(align_y_moves) < 4:
+        cube.Y()
+        align_y_moves.append('y')
+    total_moves.extend(align_y_moves)
+
     # -------------------------------------------------------------------------
     # STAGE 1: CROSS
     # -------------------------------------------------------------------------
