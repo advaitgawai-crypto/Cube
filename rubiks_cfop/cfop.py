@@ -9,6 +9,7 @@ from f import state_from_matrices, solve_state, simplify, apply_solution_to_matr
 from o import solve_oll
 from p import solve_pll
 from oll_algorithms import _expand
+from pll_verify import is_pll_solved
 
 def format_matrices(cube):
     """Format the six faces of the cube as text matrices in standard FACE_ORDER."""
@@ -52,6 +53,13 @@ def main():
 
     total_moves = []
     start_total_time = time.time()
+
+    # Align Y-rotation if necessary so front center is 1 (orange)
+    align_y_moves = []
+    while cube.front[1, 1] != 1 and len(align_y_moves) < 4:
+        cube.Y()
+        align_y_moves.append('y')
+    total_moves.extend(align_y_moves)
 
     # -------------------------------------------------------------------------
     # STAGE 1: CROSS
@@ -150,6 +158,11 @@ def main():
     for m in pll_moves:
         for name in _expand(m):
             getattr(cube, name)()
+
+    # Safety check to guarantee cube is fully solved after PLL
+    if not is_pll_solved(cube):
+        print("PLL failed verification")
+        sys.exit(1)
 
     total_moves.extend(pll_moves)
     print(f"PLL Stage Time: {pll_time:.4f} seconds")

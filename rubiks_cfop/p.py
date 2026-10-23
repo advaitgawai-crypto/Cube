@@ -46,7 +46,7 @@ def to_moves(path):
     """Convert solver tokens (e.g. ['y', 'U', 'PLL_11', "U'"]) into executable moves.
 
     PLL algorithms are written for yellow on top, but notations.py has yellow
-    on the bottom, so moves start and end with z2 (flip over, then back).
+    on the bottom, so moves start and end with z2 to match oll_verify.flip().
     """
     moves = ["z2"]
     for token in path:
@@ -161,15 +161,11 @@ def solve_pll(cube, solver=None):
 
 
 def main():
-    # print("=" * 60)
-    # print("                RUBIK'S CUBE PLL SOLVER")
-    # print("=" * 60)
     print("Enter the scrambled cube as six 3x3 matrices, one row per line.")
     print("Order: upper, front, lower, right, left, back (as Cube.display() prints).")
     print("Colours: 0 white, 1 orange, 2 yellow, 3 green, 4 blue, 5 red")
     print("  - A text file with the six matrices:  python pll_test.py cube.txt")
     print("  - Blank: generate a random test cube")
-    # print("-" * 60)
 
     try:
         text = read_matrices().strip()

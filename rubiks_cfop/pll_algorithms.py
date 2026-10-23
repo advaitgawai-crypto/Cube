@@ -86,7 +86,7 @@ class PLLAlgorithms:
         return self._run(cube, "M2 U' M U2 M' U' M2", inverse)
 
     def algorithm_19(self, cube, inverse=False):
-        return self._run(cube, "R' U R' U' y R' F' R2 U' R' U R' F R F y'", inverse)
+        return self._run(cube, "R' U R' U' y R' F' R2 U' R' U R' F R F", inverse)
 
     def algorithm_20(self, cube, inverse=False):
         return self._run(cube, "F R U' R' U' R U R' F' R U R' U' R' F R F'", inverse)
