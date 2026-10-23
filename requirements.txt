@@ -1,0 +1,9 @@
+Flask
+
+gunicorn
+
+numpy
+
+torch
+
+h5py
