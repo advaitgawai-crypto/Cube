@@ -434,39 +434,61 @@ function setupEventListeners() {
         isAnimating = false;
     });
 
-    // Solve Button
+    // Solve Button — uses async job polling so no single HTTP request blocks
+    // for the full solver duration (avoids cold-start / proxy timeouts on Render).
     document.getElementById("solve-btn").addEventListener("click", async () => {
         if (isAnimating) return;
         isAnimating = true;
         document.getElementById("animation-status").innerText = "Solving CFOP...";
 
         try {
-            // Guarantee matrix is synced before solver runs
+            // 1. Sync cube state to the server.
             await syncMatrixToFile();
-            const res = await fetch("/api/solve", { method: "POST" });
-            const data = await res.json();
 
-            if (!data.success) {
-                alert("Solver Error: " + data.error);
-                document.getElementById("animation-status").innerText = "Error";
-                isAnimating = false;
-                return;
+            // 2. Start the solver job — returns immediately with a job_id.
+            const startRes = await fetch("/api/solve", { method: "POST" });
+            const startData = await startRes.json();
+            if (!startData.success) {
+                throw new Error(startData.error || "Failed to start solver.");
+            }
+            const jobId = startData.job_id;
+
+            // 3. Poll until done (every 2 s, up to 5 min).
+            let parsed = null;
+            const MAX_POLLS = 150;   // 150 × 2 s = 5 minutes
+            for (let i = 0; i < MAX_POLLS; i++) {
+                await new Promise(r => setTimeout(r, 2000));
+                const pollRes = await fetch(`/api/solve/status/${jobId}`);
+                const pollData = await pollRes.json();
+
+                if (!pollData.success) {
+                    throw new Error(pollData.error || "Solver error.");
+                }
+                if (pollData.status === "done") {
+                    parsed = pollData.parsed;
+                    break;
+                }
+                // status === "running" — keep waiting
+                const elapsed = (i + 1) * 2;
+                document.getElementById("animation-status").innerText =
+                    `Solving CFOP... (${elapsed}s)`;
             }
 
-            const parsed = data.parsed;
-            updateSolverUI(parsed);
+            if (!parsed) {
+                throw new Error("Solver timed out waiting for result.");
+            }
 
-            // Execute solution moves sequentially WITHOUT spamming matrix.txt on each step
+            // 4. Update UI and animate.
+            updateSolverUI(parsed);
             const allMoves = parsed.total_moves;
             document.getElementById("animation-status").innerText = "Animating Solution...";
 
             for (let i = 0; i < allMoves.length; i++) {
-                const move = allMoves[i];
                 highlightMoveToken(i);
-                await executeMove(move, false);
+                await executeMove(allMoves[i], false);
             }
 
-            // Normalize internalCube to the canonical solved state and sync
+            // 5. Reset internal state to canonical solved cube and sync.
             internalCube = {
                 upper: Array(3).fill(0).map(() => Array(3).fill(0)),
                 front: Array(3).fill(0).map(() => Array(3).fill(1)),
@@ -478,8 +500,9 @@ function setupEventListeners() {
             updateCubeVisuals();
             await syncMatrixToFile();
             document.getElementById("animation-status").innerText = "Cube Solved!";
+
         } catch (err) {
-            alert("Failed to solve: " + err);
+            alert("Solver Error: " + err);
             document.getElementById("animation-status").innerText = "Error";
         } finally {
             isAnimating = false;
