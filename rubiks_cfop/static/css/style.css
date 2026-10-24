@@ -33,6 +33,8 @@ body {
     height: 100vh;
     width: 100%;
     overflow: hidden;
+    /* Prevent iOS rubber-band scroll on desktop too */
+    overscroll-behavior: none;
 }
 
 /* App Container (Desktop Default: 3-column Layout) */
@@ -318,49 +320,49 @@ h3 {
    TABLET RESPONSIVENESS (769px - 1024px)
 ============================================================= */
 @media (max-width: 1024px) and (min-width: 769px) {
-    .app-container {
-        flex-direction: column;
+    body {
         height: auto;
         min-height: 100vh;
         overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: auto;
     }
 
-    body {
+    /* Grid: canvas spans full width on top; left+right panels share row below */
+    .app-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
         height: auto;
         min-height: 100vh;
         overflow-y: auto;
     }
 
     .center-panel {
+        grid-column: 1 / -1;
         order: 1;
         width: 100%;
         height: 52vh;
         min-height: 380px;
         border-bottom: 2px solid #2a2a32;
+        border-right: none;
     }
 
     .left-panel {
         order: 2;
-        width: 50%;
+        width: 100%;
+        min-width: 0;
         border-right: 1px solid #2a2a30;
         border-bottom: none;
+        overflow-y: auto;
     }
 
     .right-panel {
         order: 3;
-        width: 50%;
+        width: 100%;
+        min-width: 0;
         border-left: none;
-    }
-
-    /* Wrap panels side-by-side below canvas */
-    .app-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto;
-    }
-
-    .center-panel {
-        grid-column: 1 / -1;
+        overflow-y: auto;
     }
 
     .moves-log-container {
@@ -377,102 +379,149 @@ h3 {
         min-height: 100vh;
         overflow-y: auto;
         overflow-x: hidden;
+        overscroll-behavior: auto;
     }
 
     .app-container {
+        display: flex;
         flex-direction: column;
         height: auto;
         min-height: 100vh;
         width: 100%;
-        overflow: visible;
+        overflow-x: hidden;
+        overflow-y: visible;
     }
 
-    /* 3D Cube Canvas: Stays at the top for prominent visual interaction */
+    /* 3D Canvas: fixed height at top so it's always visible */
     .center-panel {
         order: 1;
         width: 100%;
-        height: 48vh;
-        min-height: 300px;
-        max-height: 450px;
+        height: 45vh;
+        min-height: 280px;
+        max-height: 420px;
+        flex-shrink: 0;
         border-bottom: 2px solid #282835;
         border-right: none;
     }
 
     .status-overlay {
-        top: 12px;
-        left: 12px;
-        font-size: 0.78rem;
-        padding: 5px 12px;
+        top: 10px;
+        left: 10px;
+        font-size: 0.76rem;
+        padding: 4px 10px;
     }
 
-    /* Left Panel: Solver & Controls placed right underneath */
+    /* Left Panel: Solver stats + solution log */
     .left-panel {
         order: 2;
         width: 100%;
         min-width: 0;
-        padding: 16px 14px;
+        padding: 14px 12px;
         border-right: none;
         border-bottom: 1px solid #282835;
+        overflow-y: visible;
     }
 
+    /* Solve + Reset side by side, Scramble full-width below */
     .action-buttons {
-        flex-direction: row;
-        gap: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    /* Make Solve button span both columns so it stands out */
+    .action-buttons .btn-primary {
+        grid-column: 1 / -1;
+        min-height: 48px;
+        font-size: 1rem;
     }
 
     .action-buttons .btn {
-        flex: 1;
-        min-height: 44px; /* Accessible touch target */
-        font-size: 0.95rem;
+        min-height: 44px;
+        font-size: 0.9rem;
+    }
+
+    .solver-info-box {
+        font-size: 0.84rem;
+    }
+
+    .stage-times {
+        font-size: 0.79rem;
     }
 
     .moves-log-container {
-        max-height: 220px;
-        min-height: 120px;
+        max-height: 200px;
+        min-height: 100px;
     }
 
-    /* Right Panel: Interactive Cube Controls */
+    /* Right Panel: Cube move controls */
     .right-panel {
         order: 3;
         width: 100%;
         min-width: 0;
-        padding: 16px 14px;
+        padding: 14px 12px;
         border-left: none;
+        overflow-y: visible;
     }
 
     .btn-grid {
         grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
+        gap: 7px;
     }
 
     .move-btn {
-        min-height: 44px; /* Thumb-friendly tap size */
-        font-size: 0.95rem;
+        min-height: 46px;
+        font-size: 0.92rem;
+        border-radius: 8px;
+    }
+
+    .control-group {
+        margin-bottom: 12px;
     }
 
     .control-group h3 {
-        font-size: 0.95rem;
-        margin-bottom: 8px;
+        font-size: 0.9rem;
+        margin-bottom: 7px;
+    }
+
+    h2 {
+        font-size: 1rem;
     }
 
     .btn-secondary {
-        min-height: 44px;
-        font-size: 0.92rem;
+        min-height: 46px;
+        font-size: 0.9rem;
     }
 }
 
-/* Very Small Mobile Screens (<= 380px) */
-@media (max-width: 380px) {
-    .action-buttons {
-        flex-direction: column;
-    }
-
+/* Very Small Phones (<= 390px) */
+@media (max-width: 390px) {
     .center-panel {
-        height: 42vh;
-        min-height: 270px;
+        height: 40vh;
+        min-height: 260px;
     }
 
+    /* Solve full-width, Reset + Scramble share a row */
+    .action-buttons {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .action-buttons .btn-primary {
+        grid-column: 1 / -1;
+    }
+
+    /* 3 columns on very narrow screens so buttons aren't too cramped */
     .btn-grid {
         grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .move-btn {
+        min-height: 42px;
+        font-size: 0.85rem;
+    }
+
+    .panel {
+        padding: 12px 10px;
     }
 }
