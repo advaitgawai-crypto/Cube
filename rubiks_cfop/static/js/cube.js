@@ -55,7 +55,11 @@ function init() {
     build3DCube();
     scene.add(cubeGroup);
 
-    window.addEventListener("resize", onWindowResize);
+    // ResizeObserver fires when the container's actual painted size changes —
+    // including the initial layout on mobile where clientHeight starts at 0.
+    const resizeObserver = new ResizeObserver(() => onWindowResize());
+    resizeObserver.observe(container);
+
     setupEventListeners();
     animate();
 
@@ -121,9 +125,12 @@ function animate() {
 
 function onWindowResize() {
     const container = document.getElementById("canvas-container");
-    camera.aspect = container.clientWidth / container.clientHeight;
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    if (w === 0 || h === 0) return;   // layout not ready yet — skip
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setSize(w, h);
 }
 
 // -------------------------------------------------------------
