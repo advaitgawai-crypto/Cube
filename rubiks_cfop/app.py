@@ -5,9 +5,18 @@ import numpy as np
 from flask import Flask, render_template, jsonify, request
 from notations import Cube
 import sys
+
 app = Flask(__name__)
 
+# Absolute path to the directory containing app.py and cfop.py.
+# This guarantees all relative file references work correctly regardless
+# of the working directory the server is started from (e.g., on Render).
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
 FACE_ORDER = ["upper", "front", "lower", "right", "left", "back"]
+
+MATRIX_FILE = os.path.join(APP_DIR, "matrix.txt")
+
 
 def format_matrices_to_text(cube):
     """Format cube faces as text suitable for matrix.txt."""
@@ -18,15 +27,18 @@ def format_matrices_to_text(cube):
             lines.append(" ".join(str(val) for val in row))
     return "\n".join(lines) + "\n"
 
+
 def save_cube_to_matrix_file(cube):
-    """Write current cube state to matrix.txt."""
+    """Write current cube state to matrix.txt (always uses absolute path)."""
     text = format_matrices_to_text(cube)
-    with open("matrix.txt", "w") as f:
+    with open(MATRIX_FILE, "w") as f:
         f.write(text)
+
 
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 @app.route("/api/update_matrix", methods=["POST"])
 def update_matrix():
@@ -44,21 +56,23 @@ def update_matrix():
     save_cube_to_matrix_file(cube)
     return jsonify({"success": True})
 
+
 @app.route("/api/solve", methods=["POST"])
 def solve():
     """Run cfop.py script on matrix.txt and return the solve moves and statistics."""
     # Ensure matrix.txt is present
-    if not os.path.exists("matrix.txt"):
+    if not os.path.exists(MATRIX_FILE):
         cube = Cube()
         save_cube_to_matrix_file(cube)
 
     try:
         start_t = time.time()
         result = subprocess.run(
-            [sys.executable, "cfop.py", "matrix.txt"],
+            [sys.executable, os.path.join(APP_DIR, "cfop.py"), MATRIX_FILE],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=120,   # increased from 30 s to handle slow Render instances
+            cwd=APP_DIR    # ensure cfop.py resolves all relative imports/files correctly
         )
         elapsed = time.time() - start_t
 
@@ -81,6 +95,7 @@ def solve():
         return jsonify({"success": False, "error": "Solver timed out"}), 500
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 def parse_cfop_output(output):
     """Extract individual stage moves, times, and total moves from cfop.py output."""
@@ -133,6 +148,6 @@ def parse_cfop_output(output):
 
     return res
 
+
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
-# app.py
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)

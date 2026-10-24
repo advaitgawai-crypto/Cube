@@ -1,6 +1,10 @@
+import os
 import sys
 import time
 import numpy as np
+
+# Resolve output paths relative to this script file
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Import functions from existing modules
 from notations import Cube
@@ -172,7 +176,7 @@ def main():
 
     # Save final solved matrices
     formatted_output = format_matrices(cube) + "\n"
-    output_filename = "full_solved_matrix.txt"
+    output_filename = os.path.join(_SCRIPT_DIR, "full_solved_matrix.txt")
     with open(output_filename, "w") as f:
         f.write(formatted_output)
 
