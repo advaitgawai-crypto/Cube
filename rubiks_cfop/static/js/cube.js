@@ -447,6 +447,10 @@ function setupEventListeners() {
 
             // 2. Start the solver job — returns immediately with a job_id.
             const startRes = await fetch("/api/solve", { method: "POST" });
+            if (!startRes.ok || !startRes.headers.get("content-type")?.includes("application/json")) {
+                const text = await startRes.text();
+                throw new Error(`Server error ${startRes.status}: ${text.slice(0, 200)}`);
+            }
             const startData = await startRes.json();
             if (!startData.success) {
                 throw new Error(startData.error || "Failed to start solver.");
@@ -459,6 +463,10 @@ function setupEventListeners() {
             for (let i = 0; i < MAX_POLLS; i++) {
                 await new Promise(r => setTimeout(r, 2000));
                 const pollRes = await fetch(`/api/solve/status/${jobId}`);
+                if (!pollRes.ok || !pollRes.headers.get("content-type")?.includes("application/json")) {
+                    const text = await pollRes.text();
+                    throw new Error(`Poll error ${pollRes.status}: ${text.slice(0, 200)}`);
+                }
                 const pollData = await pollRes.json();
 
                 if (!pollData.success) {
