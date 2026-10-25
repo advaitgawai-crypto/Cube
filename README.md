@@ -12,7 +12,7 @@ DeepCubeA runs one A* search over the whole cube. Its cost grows exponentially w
 
 ---
 
-## 📊 Performance
+##  Performance
 
 ### Current results
 
@@ -72,7 +72,8 @@ Cube/
    pip install flask numpy torch
    ```
 4. **(Optional) Verify the model files.** The `models/` directory already contains the pre-trained weights the solver needs.
-
+this is also temporarily deployed on https://cfop-core.onrender.com (use pc to access)
+   
 ##  Running the Application
 
 ```bash
