@@ -6,7 +6,7 @@ Built by [Advait Gawai](https://github.com/advaitgawai-crypto) and [Om Patil](ht
 
 ---
 
-## 💡 Motivation
+##  Motivation
 
 DeepCubeA runs one A* search over the whole cube. Its cost grows exponentially with solution depth, roughly O(12^n) where n is the number of moves. Splitting the solve into four stages (Cross, F2L, OLL, PLL) makes each search smaller. Each stage has its own learned heuristic, and A* uses it to find moves for that stage.
 
@@ -35,7 +35,7 @@ DeepCubeA runs one A* search over the whole cube. Its cost grows exponentially w
 
 ---
 
-## 📦 Project Structure
+##  Project Structure
 
 ```
 Cube/
@@ -73,7 +73,7 @@ Cube/
    ```
 4. **(Optional) Verify the model files.** The `models/` directory already contains the pre-trained weights the solver needs.
 
-## ▶️ Running the Application
+##  Running the Application
 
 ```bash
 python app.py
@@ -102,7 +102,7 @@ python app.py
 }
 ```
 
-## 🧩 How It Works
+##  How It Works
 
 1. **Lazy loading.** Solver modules and PyTorch models load on first use, which keeps Flask startup fast.
 2. **Background job store.** Each solve request gets a `job_id`. The solver runs in a separate thread and updates a shared `_jobs` dictionary. The UI polls for completion.
